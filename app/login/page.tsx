@@ -19,6 +19,7 @@ export default function LoginPage() {
       </header>
       <LoginForm />
       <div className="actions">
+        <Link className="link" href="/reset">🔑 PIN кодоо мартсан уу?</Link>
         <Link className="link" href="/">Гацуургүй юу? Шинээр үүсгэх →</Link>
       </div>
     </main>

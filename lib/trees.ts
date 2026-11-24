@@ -115,6 +115,17 @@ export async function login(phone: string, password: string) {
 
 export const getTree = (id: string) => getDB().get<Tree>(k.tree(id));
 
+export const getTreeIdByPhone = (phone: string) => getDB().get<string>(k.phone(phone));
+
+/** PIN-г шинэчилнэ (утас баталгаажсаны дараа л дуудна). */
+export async function setPin(id: string, pin: string) {
+  const tree = await getTree(id);
+  if (!tree) throw new AppError(404, "Гацуур олдсонгүй.");
+  tree.passwordHash = await bcrypt.hash(pin, 10);
+  await getDB().set(k.tree(id), tree);
+  await log("info", "tree.pin_reset", undefined, { id });
+}
+
 export async function setTemplate(id: string, template: TemplateId) {
   const tree = await getTree(id);
   if (!tree) throw new AppError(404, "Гацуур олдсонгүй.");
