@@ -27,7 +27,7 @@ Redis тохируулаагүй бол санах ойд түр хадгалн�
 2. Vercel → Project → **Storage → Upstash for Redis** холбоно (`KV_REST_API_URL`, `KV_REST_API_TOKEN` автоматаар нэмэгдэнэ).
    Region-оо Азид ойр (жишээ нь Tokyo / Singapore) сонговол хурдан.
 3. **Settings → Environment Variables** — `.env.example`-д байгаа бүх утгыг бөглөнө:
-   `SESSION_SECRET`, `QPAY_USERNAME`, `QPAY_PASSWORD`, `QPAY_TERMINAL_ID`, `QPAY_MERCHANT_ID` …
+   `SESSION_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `QPAY_USERNAME`, `QPAY_PASSWORD`, `QPAY_TERMINAL_ID`, `QPAY_MERCHANT_ID` …
 4. Redeploy → `https://<домэйн>/api/health` нээж `"ok": true`, `"paymentMode": "qpay"` гарч байгааг шалгана.
 
 ## QPay QuickQR холболт
@@ -58,9 +58,9 @@ Callback-д шууд итгэхгүй, QPay-с дахин шалгаж бата�
 
 ## Админ
 - **Хаяг:** `/admin` (нэвтрэх: `/admin/login`)
-- Хэрэглэгч `lib/admin.ts` доторх `ADMIN_USERS`-д бичигдсэн. Солих/нэмэх бол тэнд засаад redeploy.
+- Хэрэглэгч Vercel → Environment Variables-д: `ADMIN_USERNAME`, `ADMIN_PASSWORD` (10+ тэмдэгт). Олон админ: `ADMIN_USERS=user:pass,user2:pass2`.
+- Солих бол Vercel дээр утгыг өөрчлөөд redeploy. Эх кодонд нууц үг байхгүй тул repo public байж болно.
 - Жагсаалт: гацуурын нэр, утас, бэлгийн тоо / багтаамж, бэлгийн нийт дүн, үүсгэсэн огноо. Нэр/утсаар хайх, дүн/тоогоор эрэмбэлэх.
-- ⚠️ Repo-г public болгож болохгүй — нууц үг эх кодонд байгаа.
 
 ## Алдааны лог
 - Бүх серверийн алдаа, QPay HTTP алдаа, төлбөрийн үйл явдал, хөтөч талын JS алдаа автоматаар бүртгэгдэнэ.

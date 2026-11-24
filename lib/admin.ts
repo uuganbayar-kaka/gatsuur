@@ -4,13 +4,25 @@ import { cookies } from "next/headers";
 import { secret } from "./session";
 
 /**
- * Админ хэрэглэгчид — эх кодонд шууд бичигдсэн.
- * Солих бол энд өөрчлөөд дахин deploy хийнэ.
- * ⚠️ Repo-г public болгож болохгүй: код харсан хэн ч нэвтэрч чадна.
+ * Админ хэрэглэгч — Vercel-ийн Environment Variables-аас уншина (эх кодонд нууц байхгүй):
+ *   ADMIN_USERNAME=admin
+ *   ADMIN_PASSWORD=<урт нууц үг>
+ * Олон админ бол: ADMIN_USERS="admin:pass1,boldoo:pass2"
+ * Аль нь ч тохируулаагүй бол админ хэсэг бүрэн хаалттай.
  */
-const ADMIN_USERS: { username: string; password: string }[] = [
-  { username: "admin", password: "zgvznwZywRsg5BF3" },
-];
+function adminUsers(): { username: string; password: string }[] {
+  const list: { username: string; password: string }[] = [];
+  if (process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD)
+    list.push({ username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD });
+  for (const pair of (process.env.ADMIN_USERS ?? "").split(",")) {
+    const i = pair.indexOf(":");
+    if (i > 0) list.push({ username: pair.slice(0, i).trim(), password: pair.slice(i + 1).trim() });
+  }
+  // Сул нууц үгийг production-д зөвшөөрөхгүй
+  return list.filter((u) => u.username && u.password.length >= (process.env.VERCEL ? 10 : 1));
+}
+
+export const adminConfigured = () => adminUsers().length > 0;
 
 const COOKIE = "ga";
 const MAX_AGE = 60 * 60 * 12;
@@ -22,7 +34,7 @@ function eq(a: string, b: string) {
 }
 
 export function checkAdminCredentials(username: string, password: string) {
-  const u = ADMIN_USERS.find((a) => eq(a.username, username));
+  const u = adminUsers().find((a) => eq(a.username, username));
   return !!u && eq(u.password, password) ? u.username : null;
 }
 
@@ -52,7 +64,7 @@ export async function getAdmin(): Promise<string | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
     const name = typeof payload.adm === "string" ? payload.adm : null;
-    return name && ADMIN_USERS.some((a) => a.username === name) ? name : null;
+    return name && adminUsers().some((a) => a.username === name) ? name : null;
   } catch {
     return null;
   }

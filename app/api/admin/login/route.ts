@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkAdminCredentials, setAdminSession } from "@/lib/admin";
+import { adminConfigured, checkAdminCredentials, setAdminSession } from "@/lib/admin";
 import { clientIp, handle } from "@/lib/http";
 import { log } from "@/lib/log";
 import { AppError, clean, rateLimit } from "@/lib/trees";
@@ -7,6 +7,7 @@ import { AppError, clean, rateLimit } from "@/lib/trees";
 export async function POST(req: Request) {
   return handle(req, async () => {
     await rateLimit(`admin-login:${clientIp(req)}`, 10, 900);
+    if (!adminConfigured()) throw new AppError(503, "Админ тохируулаагүй байна (ADMIN_USERNAME, ADMIN_PASSWORD).");
     const body = await req.json().catch(() => ({}));
     const username = clean(body.username, 60);
     const user = checkAdminCredentials(username, typeof body.password === "string" ? body.password : "");

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDB } from "@/lib/db";
+import { adminConfigured } from "@/lib/admin";
 import { paymentMode, qpayConfigured } from "@/lib/qpay";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export async function GET() {
     paymentMode: paymentMode(),
     qpayConfigured: qpayConfigured(),
     sessionSecret: !!process.env.SESSION_SECRET,
+    adminConfigured: adminConfigured(),
   };
   try {
     const db = getDB();
