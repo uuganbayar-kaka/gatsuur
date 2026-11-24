@@ -189,6 +189,8 @@ export async function createInvoice(
       amount: inv.amount,
       description,
       callbackUrl: `${baseUrl}/api/qpay/callback?inv=${inv.id}`,
+      senderInvoiceNo: inv.id,
+      phone: tree.phone,
     });
   }
 

@@ -14,7 +14,7 @@
 - Мэндчилгээг зөвхөн гацуурын эзэн уншина
 
 ## Технологи
-Next.js 16 (App Router) · Upstash Redis · QPay QuickQR v2 · JWT cookie сешн · Papercut parallax арын зураг
+Next.js 16 (App Router) · Upstash Redis · QPay Merchant v2 · JWT cookie сешн · Papercut parallax арын зураг
 
 ## Локалаар ажиллуулах
 ```bash
@@ -28,18 +28,18 @@ Redis тохируулаагүй бол санах ойд түр хадгалн�
 2. Vercel → Project → **Storage → Upstash for Redis** холбоно (`KV_REST_API_URL`, `KV_REST_API_TOKEN` автоматаар нэмэгдэнэ).
    Region-оо Азид ойр (жишээ нь Tokyo / Singapore) сонговол хурдан.
 3. **Settings → Environment Variables** — `.env.example`-д байгаа бүх утгыг бөглөнө:
-   `SESSION_SECRET`, `VERIFY_MN_API_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `QPAY_USERNAME`, `QPAY_PASSWORD`, `QPAY_TERMINAL_ID`, `QPAY_MERCHANT_ID` …
+   `SESSION_SECRET`, `VERIFY_MN_API_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `QPAY_CLIENT_ID`, `QPAY_CLIENT_SECRET`, `QPAY_INVOICE_CODE` …
 4. Redeploy → `https://<домэйн>/api/health` нээж `"ok": true`, `"paymentMode": "qpay"` гарч байгааг шалгана.
 
-## QPay QuickQR холболт
+## QPay Merchant холболт (merchant-postman.json)
 | Алхам | Endpoint |
 |---|---|
-| Token (Basic auth + `terminal_id`) — Redis-д кэшлэнэ, 401 бол шинэчилнэ | `POST /v2/auth/token`, `POST /v2/auth/refresh` |
-| Нэхэмжлэх | `POST /v2/invoice` (`merchant_id, amount, currency, description, mcc_code, callback_url, bank_accounts`) |
-| Төлбөр шалгах | `POST /v2/payment/check` (`invoice_id`) |
+| Token — Basic `client_id:client_secret`; `access_token`-г `expires_in`-ийг TTL болгон Redis-д кэшлэнэ, 401 бол шинээр авна | `POST /v2/auth/token` |
+| Нэхэмжлэх — `invoice_code, sender_invoice_no, invoice_receiver_code (утас), invoice_description, amount, callback_url` | `POST /v2/invoice` |
+| Төлбөр шалгах — `object_type: "INVOICE", object_id: <invoice_id>` | `POST /v2/payment/check` |
 
-Мерчант үүсгэх нь нэг удаагийн ажил — Postman collection-ий **"Байгууллагаар/Хувь хүнээр мерчант үүсгэх"**-ийг ажиллуулж
-гарсан `id`-г `QPAY_MERCHANT_ID`-д хийнэ.
+Үүссэн нэхэмжлэх бүр `invoice_id, qr_text, status (PENDING/PAID), created_date, phone`-тойгоор
+`qpay:invoice:<invoice_id>`-д, мөн утсаар хайхад `qpay:phone:<утас>` hash-д хадгалагдана (утас = гацуурын эзний дугаар).
 
 Төлбөрийн урсгал: клиент 3 сек тутам `GET /api/invoices/:id` → сервер QPay-с шалгана; QPay мөн `/api/qpay/callback?inv=…` руу мэдэгдэнэ.
 Callback-д шууд итгэхгүй, QPay-с дахин шалгаж баталгаажуулна.
@@ -66,7 +66,9 @@ Callback-д шууд итгэхгүй, QPay-с дахин шалгаж бата�
 | `tree:<id>:expands` | hash | invoice id → нэмэгдсэн зай |
 | `inv:<id>` | JSON (90 хоног) | нэхэмжлэх, төлөв |
 | `reset:<rid>` | JSON (20 мин) | PIN сэргээх хүсэлт ↔ verify.mn sessionId |
-| `qpay:token` | JSON (TTL) | QPay токен |
+| `qpay:token` | string (TTL = expires_in) | QPay access_token |
+| `qpay:invoice:<invoice_id>` | JSON (90 хоног) | QPay нэхэмжлэх: invoice_id, qr_text, status, created_date, phone |
+| `qpay:phone:<утас>` | hash | invoice_id → QPay нэхэмжлэх |
 | `logs` | list (сүүлийн 2000) | алдаа/үйл явдлын лог |
 
 Бэлэг, томруулалт нь **invoice id-р hash-д** бичигддэг тул callback болон polling давхар ирсэн ч нэг л удаа тооцогдоно.
