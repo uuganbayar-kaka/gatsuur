@@ -327,7 +327,7 @@ function GiftForm({
         <div key={price}>
           <div className="tier-label">
             {formatMnt(price)}
-            {price === PREMIUM_PRICE && <span className="tier-tag">✨ Онцгой анимацитай</span>}
+            {price === PREMIUM_PRICE && <span className="tier-tag">✨ Онцгой Анимейшнтэй</span>}
             {price > PREMIUM_PRICE && <span className="tier-tag gold">👑 Гацуурт ганцхан · оройд байрлана</span>}
           </div>
           <div className="orn-grid">
