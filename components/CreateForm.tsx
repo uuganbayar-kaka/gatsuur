@@ -43,11 +43,11 @@ export default function CreateForm() {
       <form className="form" onSubmit={submit}>
         <label className="field">
           Гацуурын нэр <small>(гацуур дээр харагдана)</small>
-          <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Жишээ: Болороо🥰" required />
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Жишээ: Хөөрхөнөө🥰" required />
         </label>
         <label className="field">
           Утасны дугаар
-          <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="numeric" autoComplete="tel" placeholder="99112233" required />
+          <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="numeric" autoComplete="tel" placeholder="91909029" required />
         </label>
         <label className="field">
           Нууц үг <small>(6+ тэмдэгт)</small>
