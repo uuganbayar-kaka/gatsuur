@@ -18,7 +18,7 @@ function adminUsers(): { username: string; password: string }[] {
     const i = pair.indexOf(":");
     if (i > 0) list.push({ username: pair.slice(0, i).trim(), password: pair.slice(i + 1).trim() });
   }
-  // Сул нууц үгийг production-д зөвшөөрөхгүй
+  
   return list.filter((u) => u.username && u.password.length >= (process.env.VERCEL ? 10 : 1));
 }
 
