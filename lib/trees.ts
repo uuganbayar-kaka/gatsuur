@@ -2,7 +2,7 @@ import "server-only";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { getDB } from "./db";
-import { EXPAND_PLANS, FREE_CAPACITY, ORNAMENTS, type OrnamentId, type PlanId, type TemplateId } from "./config";
+import { EXPAND_PLANS, FREE_CAPACITY, ORNAMENTS, planById, planPriceBySlots, type OrnamentId, type PlanId, type TemplateId } from "./config";
 import { log } from "./log";
 import { createQPayInvoice, isQPayPaid, paymentMode, type QPayInvoice } from "./qpay";
 
@@ -224,7 +224,7 @@ export async function finalizeInvoice(inv: Invoice): Promise<Invoice> {
     await creditTreeAmount(inv);
     await db.hset(k.gifts(inv.treeId), inv.id, gift);
   } else if (inv.kind === "expand" && inv.plan) {
-    const plan = EXPAND_PLANS.find((p) => p.id === inv.plan)!;
+    const plan = planById(inv.plan)!;
     await creditTreeAmount(inv);
     await db.hset(k.expands(inv.treeId), inv.id, plan.slots);
   }
@@ -272,7 +272,7 @@ async function ensureCounters(treeId: string, exceptInvoice?: string) {
     const expands = Object.entries(await db.hgetall<number>(k.expands(treeId)));
     const sum = expands
       .filter(([id]) => id !== exceptInvoice)
-      .reduce((s, [, slots]) => s + (EXPAND_PLANS.find((p) => p.slots === Number(slots))?.price ?? 0), 0);
+      .reduce((s, [, slots]) => s + planPriceBySlots(Number(slots)), 0);
     await db.set(k.updateAmount(treeId), sum, { nx: true });
   }
 }
@@ -401,7 +401,7 @@ export async function listInvoicesForAdmin(opts: { limit?: number; syncPending?:
     const item =
       x.kind === "gift"
         ? (ORNAMENTS.find((o) => o.id === x.gift?.ornament)?.name ?? "Бэлэг")
-        : `Томруулалт +${EXPAND_PLANS.find((p) => p.id === x.plan)?.slots ?? "?"}`;
+        : `Томруулалт +${planById(x.plan)?.slots ?? "?"}`;
     return {
       id: x.id,
       kind: x.kind,

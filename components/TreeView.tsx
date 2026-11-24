@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { EXPAND_PLANS, FREE_CAPACITY, ORNAMENTS, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
+import { useEffect, useRef, useState } from "react";
+import { EXPAND_PLANS, FREE_CAPACITY, GIFT_OPEN_DATE, ORNAMENTS, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
 import { OrnamentIcon } from "./Ornament";
 import PaySheet, { type PublicInvoice } from "./PaySheet";
 import Papercut from "./Papercut";
@@ -23,21 +23,33 @@ export default function TreeView({
   capacity,
   gifts,
   isOwner,
+  opened,
   mock,
 }: {
   tree: { id: string; name: string; template: TemplateId };
   capacity: number;
   gifts: G[];
   isOwner: boolean;
+  opened: boolean;
   mock: boolean;
 }) {
   const router = useRouter();
   const [template, setTemplate] = useState(tree.template);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [reading, setReading] = useState<number | null>(null);
+  // Задалсан захидлууд (энэ хөтөч дээр) — дахин нээхэд шууд захидал харагдана
+  const [unsealed, setUnsealed] = useState<Set<string>>(new Set());
+  const [unsealing, setUnsealing] = useState(false);
   const [shareUrl, setShareUrl] = useState(`/t/${tree.id}`);
   const [copied, setCopied] = useState(false);
   const full = gifts.length >= capacity;
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  // Том гацуур хажуу тийш гүйлгэгдэх үед голоос нь эхэлнэ
+  useEffect(() => {
+    const el = stageRef.current;
+    if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+  }, [capacity]);
 
   useEffect(() => setTemplate(tree.template), [tree.template]);
   useEffect(() => setShareUrl(`${window.location.origin}/t/${tree.id}`), [tree.id]);
@@ -73,6 +85,31 @@ export default function TreeView({
   }
 
   const reader = reading !== null ? gifts[reading] : null;
+  const UNSEALED_KEY = `unsealed:${tree.id}`;
+
+  useEffect(() => {
+    try {
+      setUnsealed(new Set(JSON.parse(localStorage.getItem(UNSEALED_KEY) ?? "[]")));
+    } catch {
+      /* хадгалах сан хаалттай байж болно */
+    }
+  }, [UNSEALED_KEY]);
+
+  function unseal(id: string) {
+    setUnsealing(true);
+    setTimeout(() => {
+      setUnsealing(false);
+      setUnsealed((prev) => {
+        const next = new Set(prev).add(id);
+        try {
+          localStorage.setItem(UNSEALED_KEY, JSON.stringify([...next]));
+        } catch {
+          /* хадгалагдахгүй байсан ч зүгээр */
+        }
+        return next;
+      });
+    }, 1300);
+  }
 
   return (
     <main className="page">
@@ -96,8 +133,9 @@ export default function TreeView({
         <OpenNotice owner={isOwner} />
       </header>
 
-      <div className="stage">
+      <div className="stage" ref={stageRef}>
         <TreeArt
+          zoom
           template={template}
           capacity={capacity}
           gifts={gifts}
@@ -144,7 +182,7 @@ export default function TreeView({
               </div>
             )}
             <p className="note-muted" style={{ color: "#fff", opacity: 0.6, textAlign: "center" }}>
-              Чимэглэл дээр дарж мессежийг уншина уу.
+              {opened ? "Чимэглэл дээр дарж захидлаа уншаарай." : `Захидлууд ${GIFT_OPEN_DATE}-нд задарна. Тэр хүртэл битүү байна.`}
             </p>
           </>
         )}
@@ -156,19 +194,40 @@ export default function TreeView({
 
       {reader && (
         <div className="reader" onClick={() => setReading(null)}>
-          <div className="note" onClick={(e) => e.stopPropagation()}>
-            <div className="note-orn"><OrnamentIcon id={reader.ornament} size={64} /></div>
-            {isOwner ? (
+          {isOwner && opened && unsealed.has(reader.id) ? (
+            <div className="note" key={reader.id} onClick={(e) => e.stopPropagation()}>
+              <div className="note-orn"><OrnamentIcon id={reader.ornament} size={64} /></div>
               <div className="msg">{reader.message || "🎄"}</div>
-            ) : (
-              <div className="locked">🔒 Мессежийг зөвхөн гацуурын эзэн уншина</div>
-            )}
-            <div className="sign">— {reader.from}</div>
-          </div>
+              <div className="sign">— {reader.from}</div>
+            </div>
+          ) : (
+            <div className={`envelope${unsealing ? " opening" : ""}`} key={reader.id} onClick={(e) => e.stopPropagation()}>
+              <div className="env-orn"><OrnamentIcon id={reader.ornament} size={64} /></div>
+              <div className="env-body">
+                <div className="env-letter">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="env-flap" />
+                <div className="env-seal">🎄</div>
+              </div>
+              <div className="env-from">— {reader.from}</div>
+              {isOwner && opened ? (
+                <button className="btn festive env-open" disabled={unsealing} onClick={() => unseal(reader.id)}>
+                  💌 Захидал задлах
+                </button>
+              ) : (
+                <div className="env-lock">
+                  🔒 {isOwner ? `Захидлыг ${GIFT_OPEN_DATE}-нд задална` : `Захидлыг зөвхөн гацуурын эзэн ${GIFT_OPEN_DATE}-нд задалж уншина`}
+                </div>
+              )}
+            </div>
+          )}
           <div className="reader-nav" onClick={(e) => e.stopPropagation()}>
-            <button className="btn secondary small" disabled={reading === 0} onClick={() => setReading((r) => (r ?? 1) - 1)}>←</button>
+            <button className="btn secondary small" disabled={reading === 0 || unsealing} onClick={() => setReading((r) => (r ?? 1) - 1)}>←</button>
             <span>{(reading ?? 0) + 1} / {gifts.length}</span>
-            <button className="btn secondary small" disabled={reading === gifts.length - 1} onClick={() => setReading((r) => (r ?? 0) + 1)}>→</button>
+            <button className="btn secondary small" disabled={reading === gifts.length - 1 || unsealing} onClick={() => setReading((r) => (r ?? 0) + 1)}>→</button>
             <button className="btn secondary small" onClick={() => setReading(null)}>Хаах</button>
           </div>
         </div>
@@ -267,7 +326,7 @@ function GiftForm({
         <input className="input" value={from} onChange={(e) => setFrom(e.target.value)} maxLength={40} placeholder="Хэнээс" required />
       </label>
       <label className="field">
-        Мэндчилгээ <small>(зөвхөн эзэн нь уншина)</small>
+        Захидал <small>(эзэн нь {GIFT_OPEN_DATE}-нд задалж уншина)</small>
         <textarea className="input" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={300} placeholder="Шинэ оны мэнд хүргэе! 🎄" />
       </label>
       <OpenNotice compact />

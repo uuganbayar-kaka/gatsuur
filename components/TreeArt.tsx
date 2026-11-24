@@ -20,13 +20,15 @@ const THEMES: Record<TemplateId, Theme> = {
   snowy: { top: "#3D8F7E", bottom: "#17665A", snow: 0.95, trunk: "#5A3A24" },
 };
 
-const T = 62;
 const TOP = 70;
-const ORN_SCALE = 0.8;
+const ORN_SCALE = 0.85;
 const ORN_R = 13 * ORN_SCALE; // чимэглэлийн радиус (~)
+const SPACING = 2 * ORN_R + 5; // хөрш чимэглэлийн хоорондох доод зай
+
+type Tier = { yA: number; yB: number; hw: number };
 
 /** Мөчрийн муруй (cx,yA) → (cx+hw,yB) дээрх y өндөр дэх хагас өргөн. */
-function halfAt(t: { yA: number; yB: number; hw: number }, y: number) {
+function halfAt(t: Tier, y: number) {
   const cy = t.yA + (t.yB - t.yA) * 0.62;
   // y(s) = (1-s)²yA + 2(1-s)s·cy + s²yB — s-г хоёртын хайлтаар олно
   let lo = 0, hi = 1;
@@ -42,45 +44,79 @@ function halfAt(t: { yA: number; yB: number; hw: number }, y: number) {
 
 export type Slot = { x: number; y: number; hookY: number; tier: number };
 
-/** Мөр бүрт r+2 байрлал; нийт n болтол мөр нэмнэ. Чимэглэл мөчрийн харагдах хэсэгт багтаж, дээд мөчрөөс унжина. */
+/**
+ * n чимэглэлд хангалттай мөчир үүсгэж, чимэглэл бүрийг мөчрийн харагдах хэсэгт багтаана.
+ * 30-аас олон бол мөчир өндөр болж, мөчир бүрт 2 эгнээ (зигзаг) чимэглэл өлгөнө.
+ */
 export function layoutTree(n: number) {
-  let rows = 3;
-  const sum = (R: number) => (R * (R + 3)) / 2;
-  while (sum(rows) < n) rows++;
-  const hw = (r: number) => 44 + r * 30;
-  const W = 2 * hw(rows - 1) + 48;
-  const cx = W / 2;
-  const tiers = Array.from({ length: rows }, (_, r) => ({
+  const dense = n > 30;
+  const T = dense ? 88 : 64;
+  const slope = 30 * (T / 62);
+  const tierAt = (r: number): Tier => ({
     yA: TOP + r * T * 0.78 - (r ? 6 : 0),
     yB: TOP + (r + 1) * T * 0.78 + T * 0.45,
-    hw: hw(r),
-  }));
-  // Мөр бүрт өргөнтэй нь пропорциональ тоо (доод мөчирт ганц нэг үлдэхгүй)
-  const counts = tiers.map((_, r) => Math.max(1, Math.floor(((r + 2) * n) / sum(rows))));
-  for (let r = rows - 1, extra = n - counts.reduce((a, b) => a + b, 0); extra > 0; r = r ? r - 1 : rows - 1, extra--) counts[r]++;
-  const slots: Slot[] = [];
-  tiers.forEach((t, r) => {
-    const c = counts[r];
+    hw: 44 + r * slope,
+  });
+
+  type Row = { y: number; half: number; cap: number; tier: number; hookY: number; sub: number; wobble: number };
+  const tiers: Tier[] = [];
+  const rows: Row[] = [];
+  let total = 0;
+  for (let r = 0; tiers.length < 3 || total < n; r++) {
+    const t = tierAt(r);
+    tiers.push(t);
     // Харагдах зурвас: дээд мөчрийн цасан ирмэгээс доош, өөрийн ирмэгээс дээш
     const bandTop = r ? tiers[r - 1].yB + 6 : t.yA + (t.yB - t.yA) * 0.48;
     const bandBot = t.yB - 6;
-    const mid = (bandTop + bandBot) / 2;
-    const wobble = Math.max(0, (bandBot - bandTop) / 2 - ORN_R - 1);
+    const subs = dense && r >= 1 ? 2 : 1;
+    for (let k = 0; k < subs; k++) {
+      const y = subs === 1 ? (bandTop + bandBot) / 2 : k === 0 ? bandTop + ORN_R + 3 : bandBot - ORN_R - 1;
+      const half = Math.max(0, halfAt(t, y + ORN_R) - ORN_R - 9);
+      const cap = Math.max(1, Math.floor((2 * half) / SPACING) + (k === 0 ? 1 : 0));
+      const wobble = subs === 1 ? Math.max(0, (bandBot - bandTop) / 2 - ORN_R - 1) : 0;
+      rows.push({ y, half, cap, tier: r, hookY: k === 0 ? bandTop - 7 : y - ORN_R - 12, sub: k, wobble });
+      total += cap;
+    }
+  }
+
+  // Эгнээ бүрт багтаамжтай нь пропорциональ тоо (хэтрүүлэхгүй)
+  // Эгнээ бүрт дор хаяж 1 (орой мөчир хоосон үлдэхгүй), үлдсэнийг багтаамжтай нь пропорциональ хуваана
+  const base = n >= rows.length ? 1 : 0;
+  const spare = rows.reduce((a, r) => a + r.cap - base, 0) || 1;
+  const counts = rows.map((r) => base + Math.min(r.cap - base, Math.floor(((n - base * rows.length) * (r.cap - base)) / spare)));
+  for (let left = n - counts.reduce((a, b) => a + b, 0); left > 0; ) {
+    for (let i = rows.length - 1; i >= 0 && left > 0; i--) {
+      if (counts[i] < rows[i].cap) {
+        counts[i]++;
+        left--;
+      }
+    }
+  }
+
+  const slots: Slot[] = [];
+  rows.forEach((row, ri) => {
+    const c = counts[ri];
     for (let i = 0; i < c; i++) {
-      const y = mid + (i % 2 ? -wobble : wobble) * (c > 1 ? 1 : 0);
-      const span = Math.max(0, halfAt(t, y + ORN_R) - ORN_R - 9);
-      const x = c === 1 ? cx : cx - span + (2 * span * i) / (c - 1);
-      slots.push({ x, y, hookY: bandTop - 7, tier: r });
+      // 1-р эгнээ ирмэгээс ирмэг хүртэл, 2-р эгнээ завсраар нь (зигзаг)
+      const f = row.sub === 0 ? (c === 1 ? 0.5 : i / (c - 1)) : (i + 0.5) / c;
+      const x = -row.half + 2 * row.half * f; // төвөөс хойших зай (мөчрийн тоо эцэст нь л тодорхой)
+      const y = row.y + (c > 1 ? (i % 2 ? -row.wobble : row.wobble) : 0);
+      slots.push({ x, y, hookY: row.hookY, tier: row.tier });
     }
   });
-  const H = tiers[rows - 1].yB + 56;
+
+  const last = tiers[tiers.length - 1];
+  const W = 2 * last.hw + 48;
+  const cx = W / 2;
+  const H = last.yB + 56;
+  for (const sl of slots) sl.x += cx;
   // Дүүргэх дараалал: дээрээс доош биш, бүх мөчрөөр тархаж дүүрнэ (алтан огтлолын алхам)
   const order = slots.map((_, i) => i).sort((a, b) => ((a * 0.618034) % 1) - ((b * 0.618034) % 1));
   return { W, H, cx, tiers, slots: order.map((i) => slots[i]) };
 }
 
 /** Мөчир дээгүүр хөндлөн унжих сувдан гирлянд (мөр бүрт чиглэл ээлжилнэ). */
-function garlandPath(cx: number, t: { yA: number; yB: number; hw: number }, top: number, flip: boolean) {
+function garlandPath(cx: number, t: Tier, top: number, flip: boolean) {
   const yl = flip ? t.yB - 9 : top + 2;
   const yr = flip ? top + 2 : t.yB - 9;
   const xl = cx - halfAt(t, yl) + 5;
@@ -113,12 +149,15 @@ export default function TreeArt({
   gifts,
   onPick,
   showEmpty = true,
+  zoom = false,
 }: {
   template: TemplateId;
   capacity: number;
   gifts: GiftLite[];
   onPick?: (g: GiftLite) => void;
   showEmpty?: boolean;
+  /** Том гацуурт чимэглэл хэт жижгэрэхгүй байх доод өргөн (эцэг элемент хажуу тийш гүйлгэнэ) */
+  zoom?: boolean;
 }) {
   const th = THEMES[template] ?? THEMES.lush;
   const { W, H, cx, tiers, slots } = layoutTree(Math.max(capacity, gifts.length));
@@ -126,7 +165,7 @@ export default function TreeArt({
   const gid = `tg-${template}`;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="tree-art" role="img" aria-label={`Гацуур, ${gifts.length} чимэглэлтэй`}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="tree-art" style={zoom ? { minWidth: Math.round(W * 0.72) } : undefined} role="img" aria-label={`Гацуур, ${gifts.length} чимэглэлтэй`}>
       <OrnamentDefs />
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
