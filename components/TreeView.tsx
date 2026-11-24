@@ -8,6 +8,7 @@ import PaySheet, { type PublicInvoice } from "./PaySheet";
 import Papercut from "./Papercut";
 import OpenNotice from "./OpenNotice";
 import Snow from "./Snow";
+import StoryButton from "./StoryImage";
 import TemplatePicker from "./TemplatePicker";
 import TreeArt from "./TreeArt";
 
@@ -166,6 +167,13 @@ export default function TreeView({
           <button className="btn primary" onClick={() => setSheet({ t: "gift" })}>🎁 Бэлэг чимэглэл өлгөх</button>
         )}
 
+        <StoryButton
+          getSvg={() => stageRef.current?.querySelector<SVGSVGElement>("svg.tree-art") ?? null}
+          name={tree.name}
+          count={hung}
+          url={shareUrl}
+        />
+
         {isOwner && (
           <>
             <div className="card">
@@ -189,7 +197,7 @@ export default function TreeView({
                 <button className="btn gold" onClick={() => setSheet({ t: "expand" })}>Багц сонгох</button>
               </div>
             )}
-            <p className="note-muted" style={{ color: "#fff", opacity: 0.6, textAlign: "center" }}>
+            <p className="hint-pill">
               {opened ? "Чимэглэл дээр дарж захидлаа уншаарай." : `Захидлууд ${GIFT_OPEN_DATE}-нд задарна. Тэр хүртэл битүү байна.`}
             </p>
           </>

@@ -141,12 +141,20 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .link { align-self: center; text-align: center; color: #fff; font-size: 14px; font-weight: 800; text-decoration: none; padding: 8px 14px; display: block; background: #5a070ccc; border-radius: 99px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .link:hover { color: #fff; }
 
+/* Цасан (цагаан) дэвсгэр дээр ч уншигдахаар бараан улаан шил */
 .card {
-  background: #ffffff14; border: 1px solid #ffffff2e; border-radius: 20px; padding: 14px;
-  display: flex; flex-direction: column; gap: 10px;
+  background: linear-gradient(160deg, #a10d1aeb, #5a070cf2); border: 1px solid #ffd36b66; border-radius: 20px; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px; color: #fff;
+  box-shadow: 0 10px 28px #3a050833; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 .card h4 { margin: 0; font-size: 15px; font-weight: 900; }
-.card p { margin: 0; font-size: 13px; opacity: .8; line-height: 1.45; }
+.card p { margin: 0; font-size: 13px; opacity: .88; line-height: 1.45; }
+.btn.story-btn { background: #5a070cd9; border-color: #ffd36b80; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.story-modal { width: min(100%, 380px); max-height: 100%; display: flex; flex-direction: column; gap: 12px; animation: pop .35s; }
+.story-preview { display: block; width: auto; max-width: 100%; align-self: center; max-height: 62dvh; border-radius: 18px; box-shadow: 0 20px 40px #00000080; background: #3a0306; }
+.story-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.story-actions .btn.small { align-self: center; }
+.hint-pill { align-self: center; text-align: center; margin: 0; padding: 8px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; line-height: 1.45; color: #fff; background: #5a070cd9; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .share-row { display: flex; gap: 8px; align-items: center; }
 .share-url {
   flex: 1; min-width: 0; background: #0000002e; border-radius: 12px; padding: 10px 12px;
@@ -160,10 +168,10 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .tpl.sel { border-color: #ffe58a; background: #ffe58a24; }
 .tpl .mini { width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden; display: flex; align-items: flex-end; padding: 4px 6px 0; background: linear-gradient(180deg, #6e0a0f, #c4060c); }
 .tpl small { opacity: .65; font-weight: 600; font-size: 10px; }
-.up { background: #ffe58a1f; border: 1px solid #ffe58a73; border-radius: 18px; padding: 14px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
+.up { background: linear-gradient(160deg, #a10d1aeb, #5a070cf2); border: 1px solid #ffe58a73; color: #fff; box-shadow: 0 10px 28px #3a050833; border-radius: 18px; padding: 14px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
 .up b { font-size: 16px; }
 .up span { font-size: 13px; opacity: .85; line-height: 1.45; }
-.plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
 .plan { background: #fff; color: var(--ink); border-radius: 16px; padding: 10px 4px; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .plan b { font-size: 22px; color: #c94a5c; }
 .plan small { font-size: 11px; font-weight: 700; opacity: .7; }
@@ -413,7 +421,13 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 @keyframes livepulse { 50% { opacity: .25; } }
 .admin-table tr.flash { animation: rowflash 2.5s ease-out; }
 @keyframes rowflash { from { background: #1f8a5566; } }
-@media (max-width: 560px) { .admin-stats b { font-size: 17px; } }
+.admin-bar { flex-wrap: wrap; gap: 10px; }
+@media (max-width: 560px) {
+  .admin-stats b { font-size: 17px; }
+  .admin-nav { width: 100%; justify-content: flex-start; }
+  .admin-user { display: none; }
+  .admin-nav form, .admin-nav > button:last-child { margin-left: auto; }
+}
 
 /* verify.mn */
 .verify-box { background: #ffffff14; border: 1px solid #ffd36b66; border-radius: 16px; padding: 14px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
