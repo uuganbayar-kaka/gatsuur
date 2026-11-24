@@ -65,6 +65,7 @@ Callback-д шууд итгэхгүй, QPay-с дахин шалгаж бата�
 | `tree:<id>:gifts` | hash | invoice id → бэлэг |
 | `tree:<id>:expands` | hash | invoice id → нэмэгдсэн зай |
 | `inv:<id>` | JSON (90 хоног) | нэхэмжлэх, төлөв |
+| `invoices:index` | list (сүүлийн 5000) | нэхэмжлэхийн id (админ жагсаалт) |
 | `reset:<rid>` | JSON (20 мин) | PIN сэргээх хүсэлт ↔ verify.mn sessionId |
 | `qpay:token` | string (TTL = expires_in) | QPay access_token |
 | `qpay:invoice:<invoice_id>` | JSON (90 хоног) | QPay нэхэмжлэх: invoice_id, qr_text, status, created_date, phone |
@@ -77,6 +78,7 @@ Callback-д шууд итгэхгүй, QPay-с дахин шалгаж бата�
 - **Хаяг:** `/admin` (нэвтрэх: `/admin/login`)
 - Хэрэглэгч Vercel → Environment Variables-д: `ADMIN_USERNAME`, `ADMIN_PASSWORD` (10+ тэмдэгт). Олон админ: `ADMIN_USERS=user:pass,user2:pass2`.
 - Солих бол Vercel дээр утгыг өөрчлөөд redeploy. Эх кодонд нууц үг байхгүй тул repo public байж болно.
+- **Нэхэмжлэх:** `/admin/invoices` — бүх нэхэмжлэх, төлөв 5 сек тутам live шинэчлэгдэнэ (`GET /api/admin/invoices`; хүлээгдэж буй сүүлийн 10-ыг QPay-с шалгана). Таб идэвхгүй үед зогсоно.
 - Жагсаалт: гацуурын нэр, утас, бэлгийн тоо / багтаамж, бэлгийн нийт дүн, үүсгэсэн огноо. Нэр/утсаар хайх, дүн/тоогоор эрэмбэлэх.
 
 ## Алдааны лог

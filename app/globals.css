@@ -290,6 +290,22 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .admin-table .muted, .admin .muted { opacity: .55; }
 .admin-table .mono { font-family: ui-monospace, Menlo, monospace; }
+.admin-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.admin-nav .chip.on { background: #ffd36b; color: #2a0306; }
+.admin-user { opacity: .7; font-size: 13px; }
+.admin-search select { font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 12px; border: 1px solid #2c3046; background: #1d2030; color: #fff; }
+.admin .small { font-size: 12px; }
+.badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.badge.paid { background: #1f8a5533; color: #6fe3a5; }
+.badge.pending { background: #ffd36b26; color: #ffd36b; }
+.live { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 0 0 10px; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: #6fe3a5; }
+.live-ok i { animation: livepulse 1.6s ease-in-out infinite; }
+.live-paused i { background: #888; }
+.live-err i { background: #ff8a8f; }
+@keyframes livepulse { 50% { opacity: .25; } }
+.admin-table tr.flash { animation: rowflash 2.5s ease-out; }
+@keyframes rowflash { from { background: #1f8a5566; } }
 @media (max-width: 560px) { .admin-stats b { font-size: 17px; } }
 
 /* verify.mn */

@@ -45,10 +45,12 @@ const k = {
   gifts: (id: string) => `tree:${id}:gifts`,
   phone: (p: string) => `phone:${p}`,
   inv: (id: string) => `inv:${id}`,
+  invIndex: "invoices:index", // list: шинэ нэхэмжлэх эхэнд (админ жагсаалтад, сүүлийн 5000)
   rl: (s: string) => `rl:${s}`,
 };
 
 const INV_TTL = 60 * 60 * 24 * 90;
+const INV_INDEX_MAX = 5000;
 
 const ALPHA = "abcdefghijkmnpqrstuvwxyz23456789";
 export function randomId(len = 8) {
@@ -195,6 +197,8 @@ export async function createInvoice(
   }
 
   await db.set(k.inv(inv.id), inv, { ex: INV_TTL });
+  await db.lpush(k.invIndex, inv.id);
+  await db.ltrim(k.invIndex, 0, INV_INDEX_MAX - 1);
   await log("info", "invoice.created", undefined, { id: inv.id, kind: inv.kind, treeId: inv.treeId, amount: inv.amount, qpayId: inv.qpay?.invoice_id });
   return inv;
 }
@@ -283,4 +287,73 @@ export async function listTreesForAdmin(): Promise<AdminTreeRow[]> {
     rows.push(...batch.filter((r): r is AdminTreeRow => !!r));
   }
   return rows.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export type AdminInvoiceRow = {
+  id: string;
+  kind: Invoice["kind"];
+  status: Invoice["status"];
+  amount: number;
+  treeId: string;
+  treeName: string;
+  phone: string;
+  item: string;
+  from?: string;
+  qpayId?: string;
+  createdAt: number;
+  paidAt?: number;
+};
+
+/**
+ * Админы нэхэмжлэхийн жагсаалт (шинэ нь эхэндээ).
+ * `syncPending` > 0 бол сүүлийн 24 цагийн хүлээгдэж буй нэхэмжлэхүүдээс тэр тоогоор QPay-с шалгаж төлвийг шинэчилнэ
+ * — callback ирээгүй ч админ дээр live шинэчлэгдэнэ.
+ */
+export async function listInvoicesForAdmin(opts: { limit?: number; syncPending?: number } = {}): Promise<AdminInvoiceRow[]> {
+  const db = getDB();
+  const ids = await db.lrange<string>(k.invIndex, 0, (opts.limit ?? 500) - 1);
+  const invs: Invoice[] = [];
+  for (let i = 0; i < ids.length; i += 25) {
+    const batch = await Promise.all(ids.slice(i, i + 25).map((id) => getInvoice(id)));
+    invs.push(...batch.filter((x): x is Invoice => !!x));
+  }
+
+  if (opts.syncPending && paymentMode() === "qpay") {
+    const recent = invs.filter((x) => x.status === "pending" && x.qpay && Date.now() - x.createdAt < 86_400_000).slice(0, opts.syncPending);
+    const synced = await Promise.all(recent.map((x) => syncInvoice(x)));
+    for (const s of synced) {
+      const i = invs.findIndex((x) => x.id === s.id);
+      if (i >= 0) invs[i] = s;
+    }
+  }
+
+  const treeIds = [...new Set(invs.map((x) => x.treeId))];
+  const trees = new Map<string, Tree | null>();
+  for (let i = 0; i < treeIds.length; i += 25) {
+    const batch = treeIds.slice(i, i + 25);
+    const got = await Promise.all(batch.map((id) => getTree(id)));
+    batch.forEach((id, j) => trees.set(id, got[j]));
+  }
+
+  return invs.map((x) => {
+    const t = trees.get(x.treeId);
+    const item =
+      x.kind === "gift"
+        ? (ORNAMENTS.find((o) => o.id === x.gift?.ornament)?.name ?? "Бэлэг")
+        : `Томруулалт +${EXPAND_PLANS.find((p) => p.id === x.plan)?.slots ?? "?"}`;
+    return {
+      id: x.id,
+      kind: x.kind,
+      status: x.status,
+      amount: x.amount,
+      treeId: x.treeId,
+      treeName: t?.name ?? "—",
+      phone: t?.phone ?? "—",
+      item,
+      from: x.gift?.from,
+      qpayId: x.qpay?.invoice_id,
+      createdAt: x.createdAt,
+      paidAt: x.paidAt,
+    };
+  });
 }

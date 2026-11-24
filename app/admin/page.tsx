@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import AdminLogout from "@/components/AdminLogout";
+import AdminNav from "@/components/AdminNav";
 import { getAdmin } from "@/lib/admin";
 import { formatMnt } from "@/lib/config";
 import { listTreesForAdmin } from "@/lib/trees";
@@ -28,14 +28,7 @@ export default async function AdminTrees({ searchParams }: { searchParams: Promi
 
   return (
     <main className="admin">
-      <div className="admin-bar">
-        <b>🎄 Админ</b>
-        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Link className="chip" href="/admin/logs">Лог</Link>
-          <span style={{ opacity: 0.7, fontSize: 13 }}>{admin}</span>
-          <AdminLogout />
-        </span>
-      </div>
+      <AdminNav admin={admin} active="/admin" />
 
       <div className="admin-stats">
         <div><small>Гацуур</small><b>{rows.length}</b></div>
