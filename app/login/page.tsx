@@ -15,7 +15,7 @@ export default function LoginPage() {
       </div>
       <header className="head">
         <div className="title">Миний гацуур</div>
-        <div className="sub">Утасны дугаар, нууц үгээрээ нэвтэрнэ үү.</div>
+        <div className="sub">Утасны дугаар, PIN кодоороо нэвтэрнэ үү.</div>
       </header>
       <LoginForm />
       <div className="actions">

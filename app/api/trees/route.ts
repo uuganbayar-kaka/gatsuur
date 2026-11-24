@@ -9,13 +9,13 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const name = clean(body.name, 40);
     const phone = normalizePhone(body.phone);
-    const password = typeof body.password === "string" ? body.password : "";
+    const pin = typeof body.pin === "string" ? body.pin : "";
     const template = isTemplate(body.template) ? body.template : "lush";
     if (!name) throw new AppError(400, "Гацуурын нэрээ оруулна уу.");
     if (!phone) throw new AppError(400, "Утасны дугаар 8 оронтой байх ёстой.");
-    if (password.length < 6 || password.length > 72) throw new AppError(400, "Нууц үг дор хаяж 6 тэмдэгт байна.");
+    if (!/^\d{4}$/.test(pin)) throw new AppError(400, "PIN код 4 оронтой тоо байна.");
     await rateLimit(`create:${clientIp(req)}`, 10, 3600);
-    const tree = await createTree({ name, phone, password, template });
+    const tree = await createTree({ name, phone, password: pin, template });
     await setSession(tree.id);
     return NextResponse.json({ id: tree.id });
   });

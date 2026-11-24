@@ -20,6 +20,7 @@ export type Gift = {
   ornament: OrnamentId;
   from: string;
   message: string;
+  amount?: number; // төлсөн дүн (хуучин бичлэгт байхгүй бол чимэглэлийн үнээр тооцно)
   createdAt: number;
 };
 
@@ -37,6 +38,7 @@ export type Invoice = {
 };
 
 const k = {
+  index: "trees:index", // hash: tree id → createdAt (админ жагсаалтад)
   tree: (id: string) => `tree:${id}`,
   // Hash-ууд: field = invoice id → давхар төлбөр баталгаажсан ч нэг л удаа бичигдэнэ (idempotent)
   expands: (id: string) => `tree:${id}:expands`,
@@ -92,6 +94,7 @@ export async function createTree(input: { name: string; phone: string; password:
   };
   try {
     await db.set(k.tree(id), tree);
+    await db.hset(k.index, id, tree.createdAt);
   } catch (e) {
     // Гацуур бичигдээгүй бол утасны дугаарыг чөлөөлнө — эс тэгвэл дахин бүртгүүлэх боломжгүй болно
     await db.del(k.phone(input.phone)).catch(() => {});
@@ -106,7 +109,7 @@ export async function login(phone: string, password: string) {
   const id = await db.get<string>(k.phone(phone));
   const tree = id ? await getTree(id) : null;
   if (!tree || !(await bcrypt.compare(password, tree.passwordHash)))
-    throw new AppError(401, "Утасны дугаар эсвэл нууц үг буруу байна.");
+    throw new AppError(401, "Утасны дугаар эсвэл PIN код буруу байна.");
   return tree;
 }
 
@@ -194,7 +197,7 @@ export async function finalizeInvoice(inv: Invoice): Promise<Invoice> {
   if (inv.status === "paid") return inv;
   const db = getDB();
   if (inv.kind === "gift" && inv.gift) {
-    const gift: Gift = { id: inv.id, ...inv.gift, createdAt: inv.createdAt };
+    const gift: Gift = { id: inv.id, ...inv.gift, amount: inv.amount, createdAt: inv.createdAt };
     await db.hset(k.gifts(inv.treeId), inv.id, gift);
   } else if (inv.kind === "expand" && inv.plan) {
     const plan = EXPAND_PLANS.find((p) => p.id === inv.plan)!;
@@ -230,4 +233,41 @@ export function publicInvoice(inv: Invoice) {
     urls: inv.qpay?.urls ?? [],
     mock: paymentMode() === "mock",
   };
+}
+
+export const giftAmount = (g: Gift) => g.amount ?? ORNAMENTS.find((o) => o.id === g.ornament)?.price ?? 0;
+
+export type AdminTreeRow = {
+  id: string;
+  name: string;
+  phone: string;
+  createdAt: number;
+  giftCount: number;
+  giftAmount: number;
+  capacity: number;
+};
+
+/** Админ: бүх гацуур + бэлгийн тоо, нийт дүн. Redis-ийг хэт ачаалахгүйн тулд 25-аар багцалж уншина. */
+export async function listTreesForAdmin(): Promise<AdminTreeRow[]> {
+  const ids = Object.keys(await getDB().hgetall<number>(k.index));
+  const rows: AdminTreeRow[] = [];
+  for (let i = 0; i < ids.length; i += 25) {
+    const batch = await Promise.all(
+      ids.slice(i, i + 25).map(async (id) => {
+        const v = await getTreeView(id);
+        if (!v) return null;
+        return {
+          id,
+          name: v.tree.name,
+          phone: v.tree.phone,
+          createdAt: v.tree.createdAt,
+          giftCount: v.gifts.length,
+          giftAmount: v.gifts.reduce((s, g) => s + giftAmount(g), 0),
+          capacity: v.capacity,
+        };
+      }),
+    );
+    rows.push(...batch.filter((r): r is AdminTreeRow => !!r));
+  }
+  return rows.sort((a, b) => b.createdAt - a.createdAt);
 }

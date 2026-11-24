@@ -4,25 +4,28 @@ import { useState } from "react";
 import type { TemplateId } from "@/lib/config";
 import TemplatePicker from "./TemplatePicker";
 
+const onlyDigits = (v: string) => v.replace(/\D/g, "").slice(0, 4);
+
 export default function CreateForm() {
   const router = useRouter();
   const [template, setTemplate] = useState<TemplateId>("lush");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [password2, setPassword2] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr("");
-    if (password !== password2) return setErr("Нууц үг таарахгүй байна.");
+    if (!/^\d{4}$/.test(pin)) return setErr("PIN код 4 оронтой тоо байна.");
+    if (pin !== pin2) return setErr("PIN код таарахгүй байна.");
     setBusy(true);
     const res = await fetch("/api/trees", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, phone, password, template }),
+      body: JSON.stringify({ name, phone, pin, template }),
     }).catch(() => null);
     const j = res ? await res.json().catch(() => ({})) : {};
     if (!res?.ok) {
@@ -47,17 +50,19 @@ export default function CreateForm() {
         </label>
         <label className="field">
           Утасны дугаар
-          <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="numeric" autoComplete="tel" placeholder="91909029" required />
+          <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="numeric" autoComplete="tel" placeholder="99112244" required />
         </label>
-        <label className="field">
-          Нууц үг <small>(6+ тэмдэгт)</small>
-          <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={6} required />
-        </label>
-        <label className="field">
-          Нууц үг дахин
-          <input className="input" type="password" value={password2} onChange={(e) => setPassword2(e.target.value)} autoComplete="new-password" minLength={6} required />
-        </label>
-        <p className="note-muted">Утасны дугаар, нууц үгээрээ дараа нь өөрийн гацуур руу нэвтэрч орно.</p>
+        <div className="pin-row">
+          <label className="field">
+            PIN код <small>(4 оронтой)</small>
+            <input className="input pin" type="password" value={pin} onChange={(e) => setPin(onlyDigits(e.target.value))} inputMode="numeric" pattern="\d{4}" maxLength={4} autoComplete="new-password" placeholder="••••" required />
+          </label>
+          <label className="field">
+            PIN дахин
+            <input className="input pin" type="password" value={pin2} onChange={(e) => setPin2(onlyDigits(e.target.value))} inputMode="numeric" pattern="\d{4}" maxLength={4} autoComplete="new-password" placeholder="••••" required />
+          </label>
+        </div>
+        <p className="note-muted">Утасны дугаар, PIN кодоороо дараа нь өөрийн гацуур руу нэвтэрч орно. PIN-ээ мартахгүй санаарай.</p>
         {err && <div className="err">{err}</div>}
         <button className="btn festive" disabled={busy}>
           {busy ? "Үүсгэж байна…" : "🎄 Гацуураа үүсгэх · Үнэгүй ✨"}

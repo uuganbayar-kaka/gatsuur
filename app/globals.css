@@ -263,3 +263,31 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .form-label small { opacity: .6; font-weight: 600; }
 
 .footer { margin-top: auto; padding-top: 28px; padding-bottom: 8px; color: #8e1f3a; font-weight: 700; font-size: 12px; opacity: .8; text-align: center; position: relative; z-index: 1; }
+
+/* PIN */
+.pin-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+.form .pin-row .field { margin-top: 12px; }
+.input.pin { text-align: center; letter-spacing: .5em; font-size: 24px; font-weight: 800; padding: 10px; }
+.input.pin::placeholder { letter-spacing: .3em; }
+
+/* ===== Admin ===== */
+.admin-page { background: linear-gradient(180deg, #5a070c, #2a0306); }
+.admin { min-height: 100dvh; background: #12141c; color: #e9e9f0; padding: 16px; max-width: 1100px; margin: 0 auto; }
+.admin a { color: #ffd36b; text-decoration: none; }
+.admin-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 18px; }
+.admin-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.admin-stats div { background: #1d2030; border: 1px solid #2c3046; border-radius: 14px; padding: 12px 14px; }
+.admin-stats small { display: block; opacity: .65; font-size: 12px; font-weight: 700; }
+.admin-stats b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.admin-search { display: flex; gap: 8px; margin-bottom: 12px; }
+.admin-search input { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 12px; border: 1px solid #2c3046; background: #1d2030; color: #fff; }
+.admin-search button { padding: 10px 16px; border-radius: 12px; background: #1f8a55; color: #fff; font-weight: 800; }
+.admin-table-wrap { overflow-x: auto; border: 1px solid #2c3046; border-radius: 14px; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
+.admin-table th, .admin-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #23263a; }
+.admin-table th { background: #1d2030; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; opacity: .85; }
+.admin-table tbody tr:hover { background: #1a1d2b; }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table .muted, .admin .muted { opacity: .55; }
+.admin-table .mono { font-family: ui-monospace, Menlo, monospace; }
+@media (max-width: 560px) { .admin-stats b { font-size: 17px; } }

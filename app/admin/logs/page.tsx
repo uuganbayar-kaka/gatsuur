@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
-import { isAdmin } from "@/lib/admin";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAdmin } from "@/lib/admin";
 import { readLogs, type LogLevel } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
@@ -7,15 +8,15 @@ export const metadata = { title: "Лог", robots: { index: false } };
 
 const COLORS: Record<LogLevel, string> = { error: "#ff8a8f", warn: "#ffd36b", info: "#9fc2ff" };
 
-export default async function LogsPage({ searchParams }: { searchParams: Promise<{ token?: string; level?: string }> }) {
-  const { token, level } = await searchParams;
-  if (!isAdmin(token)) notFound();
+export default async function LogsPage({ searchParams }: { searchParams: Promise<{ level?: string }> }) {
+  if (!(await getAdmin())) redirect("/admin/login");
+  const { level } = await searchParams;
   const lv = (["error", "warn", "info"] as const).find((l) => l === level);
   const rows = await readLogs(500, lv);
-  const q = (l?: string) => `?token=${encodeURIComponent(token!)}${l ? `&level=${l}` : ""}`;
+  const q = (l?: string) => (l ? `?level=${l}` : "?");
   return (
     <main style={{ padding: 16, fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12, background: "#10131f", minHeight: "100dvh" }}>
-      <h2 style={{ fontFamily: "var(--f-ui)", margin: "0 0 10px" }}>Лог ({rows.length})</h2>
+      <h2 style={{ fontFamily: "var(--f-ui)", margin: "0 0 10px" }}><Link href="/admin">← Админ</Link> · Лог ({rows.length})</h2>
       <p style={{ display: "flex", gap: 12 }}>
         <a href={q()}>бүгд</a> <a href={q("error")}>error</a> <a href={q("warn")}>warn</a> <a href={q("info")}>info</a>
       </p>

@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function LoginForm() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -16,7 +16,7 @@ export default function LoginForm() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, password }),
+      body: JSON.stringify({ phone, pin }),
     }).catch(() => null);
     const j = res ? await res.json().catch(() => ({})) : {};
     if (!res?.ok) {
@@ -34,8 +34,8 @@ export default function LoginForm() {
         <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="numeric" autoComplete="tel" placeholder="99112233" required />
       </label>
       <label className="field">
-        Нууц үг
-        <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+        PIN код <small>(4 оронтой)</small>
+        <input className="input pin" type="password" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" pattern="\d{4}" maxLength={4} autoComplete="current-password" placeholder="••••" required />
       </label>
       {err && <div className="err">{err}</div>}
       <button className="btn festive" disabled={busy}>

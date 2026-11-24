@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 const COOKIE = "gs";
 const MAX_AGE = 60 * 60 * 24 * 60;
 
-function secret() {
+export function secret() {
   const s = process.env.SESSION_SECRET;
   if (!s) {
     if (process.env.VERCEL) throw new Error("SESSION_SECRET тохируулаагүй байна.");
