@@ -61,6 +61,16 @@ export function OrnamentDefs() {
         <stop offset=".5" stopColor="#fff" stopOpacity=".85" />
         <stop offset="1" stopColor="#fff" stopOpacity="0" />
       </linearGradient>
+      <radialGradient id="o-aura">
+        <stop offset="0" stopColor="#FFF3C4" stopOpacity=".9" />
+        <stop offset=".5" stopColor="#FFD36B" stopOpacity=".35" />
+        <stop offset="1" stopColor="#FF9A3C" stopOpacity="0" />
+      </radialGradient>
+      <linearGradient id="o-crown" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#FFF7CF" />
+        <stop offset=".45" stopColor="#FFD24A" />
+        <stop offset="1" stopColor="#D08A0E" />
+      </linearGradient>
       <radialGradient id="o-super" cx=".35" cy=".3" r=".8">
         <stop offset="0" stopColor="#FFFFFF" />
         <stop offset=".35" stopColor="#FFE58A" />
@@ -224,6 +234,25 @@ export function OrnamentShape({ id }: { id: OrnamentId }) {
           <clipPath id="o-gem-clip"><path d="M-13 -5 L-7 -13 L7 -13 L13 -5 L0 14Z" /></clipPath>
           <g clipPath="url(#o-gem-clip)"><rect className="a-sweep" x="-30" y="-14" width="9" height="30" fill="url(#o-shine)" transform="skewX(-20)" /></g>
           <path d="M9 -16 L10 -13.5 L12.5 -12.5 L10 -11.5 L9 -9 L8 -11.5 L5.5 -12.5 L8 -13.5Z" fill="#fff" className="twinkle" />
+        </g>
+      );
+    case "topper":
+      return (
+        <g>
+          <circle r="26" fill="url(#o-aura)" className="halo" />
+          <g className="rays-slow">
+            {Array.from({ length: 12 }, (_, i) => (
+              <path key={i} d={i % 2 ? "M0 -30 L1.6 -17 L-1.6 -17Z" : "M0 -36 L2.4 -18 L-2.4 -18Z"} fill="#FFE7A0" opacity={i % 2 ? 0.6 : 0.85} transform={`rotate(${i * 30})`} />
+            ))}
+          </g>
+          <g className="a-wobble">
+            <polygon points={STAR(17, 7.2)} fill="url(#o-crown)" stroke="#B5770A" strokeWidth="1" strokeLinejoin="round" />
+            <polygon points={STAR(10.5, 4.6)} fill="#FFF3B0" opacity=".75" />
+            <path d="M0 -4.6 L3.6 0 L0 4.6 L-3.6 0Z" fill="url(#o-gem)" stroke="#2F56B8" strokeWidth=".5" />
+          </g>
+          {[[-14, -14, 0], [15, -11, 0.7], [-12, 13, 1.3], [13, 14, 2]].map(([x, y, d], i) => (
+            <path key={i} className="twinkle" style={{ animationDelay: `${d}s` }} transform={`translate(${x} ${y})`} d="M0 -3.5 L.9 -.9 L3.5 0 L.9 .9 L0 3.5 L-.9 .9 L-3.5 0 L-.9 -.9Z" fill="#fff" />
+          ))}
         </g>
       );
     case "super":

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { EXPAND_PLANS, FREE_CAPACITY, GIFT_OPEN_DATE, ORNAMENTS, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
+import { EXPAND_PLANS, FREE_CAPACITY, GIFT_OPEN_DATE, ORNAMENTS, PREMIUM_PRICE, TOPPER_ID, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
 import { OrnamentIcon } from "./Ornament";
 import PaySheet, { type PublicInvoice } from "./PaySheet";
 import Papercut from "./Papercut";
@@ -21,6 +21,7 @@ type Sheet =
 export default function TreeView({
   tree,
   capacity,
+  topperId,
   gifts,
   isOwner,
   opened,
@@ -28,6 +29,7 @@ export default function TreeView({
 }: {
   tree: { id: string; name: string; template: TemplateId };
   capacity: number;
+  topperId: string | null;
   gifts: G[];
   isOwner: boolean;
   opened: boolean;
@@ -42,7 +44,9 @@ export default function TreeView({
   const [unsealing, setUnsealing] = useState(false);
   const [shareUrl, setShareUrl] = useState(`/t/${tree.id}`);
   const [copied, setCopied] = useState(false);
-  const full = gifts.length >= capacity;
+  // Оройн чимэглэл багтаамжид тооцогдохгүй
+  const hung = gifts.filter((g) => g.id !== topperId).length;
+  const full = hung >= capacity;
   const stageRef = useRef<HTMLDivElement>(null);
 
   // Том гацуур хажуу тийш гүйлгэгдэх үед голоос нь эхэлнэ
@@ -128,7 +132,7 @@ export default function TreeView({
         <div className="title">{tree.name}</div>
         <div className="sub">Шинэ жилийн гацуур</div>
         <div className="count">
-          🎁 <b>{gifts.length}</b> / {capacity} бэлэг чимэглэл өлгөгдсөн
+          🎁 <b>{hung}</b> / {capacity} бэлэг чимэглэл өлгөгдсөн
         </div>
         <OpenNotice owner={isOwner} />
       </header>
@@ -139,6 +143,7 @@ export default function TreeView({
           template={template}
           capacity={capacity}
           gifts={gifts}
+          topperId={topperId}
           onPick={(g) => setReading(gifts.findIndex((x) => x.id === g.id))}
         />
       </div>
@@ -153,6 +158,9 @@ export default function TreeView({
                 : `${tree.name}-ийн гацуурт сул зай үлдээгүй байна. Эзэн нь томруулсны дараа өлгөх боломжтой.`}
             </span>
             {isOwner && <button className="btn gold" onClick={() => setSheet({ t: "expand" })}>Гацуураа томруулах</button>}
+            {!topperId && (
+              <button className="btn festive" onClick={() => setSheet({ t: "gift" })}>👑 Оройн онцгой чимэглэл өлгөх</button>
+            )}
           </div>
         ) : (
           <button className="btn primary" onClick={() => setSheet({ t: "gift" })}>🎁 Бэлэг чимэглэл өлгөх</button>
@@ -246,6 +254,8 @@ export default function TreeView({
               <GiftForm
                 treeId={tree.id}
                 treeName={tree.name}
+                full={full}
+                topperTaken={!!topperId}
                 onInvoice={(invoice, title) => setSheet({ t: "pay", invoice, title })}
               />
             )}
@@ -281,19 +291,25 @@ async function postInvoice(body: object): Promise<{ inv?: PublicInvoice; error?:
 function GiftForm({
   treeId,
   treeName,
+  full,
+  topperTaken,
   onInvoice,
 }: {
   treeId: string;
   treeName: string;
+  full: boolean;
+  topperTaken: boolean;
   onInvoice: (inv: PublicInvoice, title: string) => void;
 }) {
-  const [orn, setOrn] = useState<OrnamentId>("ball");
+  // Гацуур дүүрсэн ч оройн чимэглэл (багтаамжид тооцогдохгүй) сул байж болно
+  const options = ORNAMENTS.filter((o) => (full ? o.id === TOPPER_ID : true));
+  const [orn, setOrn] = useState<OrnamentId>(full ? TOPPER_ID : "ball");
   const [from, setFrom] = useState("");
   const [message, setMessage] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const selected = ORNAMENTS.find((o) => o.id === orn)!;
-  const tiers = [...new Set(ORNAMENTS.map((o) => o.price))];
+  const tiers = [...new Set(options.map((o) => o.price))];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -309,15 +325,28 @@ function GiftForm({
     <form onSubmit={submit}>
       {tiers.map((price) => (
         <div key={price}>
-          <div className="tier-label">{formatMnt(price)}</div>
+          <div className="tier-label">
+            {formatMnt(price)}
+            {price === PREMIUM_PRICE && <span className="tier-tag">✨ Онцгой анимацитай</span>}
+            {price > PREMIUM_PRICE && <span className="tier-tag gold">👑 Гацуурт ганцхан · оройд байрлана</span>}
+          </div>
           <div className="orn-grid">
-            {ORNAMENTS.filter((o) => o.price === price).map((o) => (
-              <button type="button" key={o.id} className={`orn-opt${orn === o.id ? " sel" : ""}`} onClick={() => setOrn(o.id)}>
-                <OrnamentIcon id={o.id} />
-                {o.name}
-                <b>{formatMnt(o.price)}</b>
-              </button>
-            ))}
+            {options.filter((o) => o.price === price).map((o) => {
+              const sold = o.id === TOPPER_ID && topperTaken;
+              return (
+                <button
+                  type="button"
+                  key={o.id}
+                  disabled={sold}
+                  className={`orn-opt${orn === o.id ? " sel" : ""}${o.id === TOPPER_ID ? " topper-opt" : ""}`}
+                  onClick={() => setOrn(o.id)}
+                >
+                  <OrnamentIcon id={o.id} size={o.id === TOPPER_ID ? 64 : 46} />
+                  {o.name}
+                  <b>{sold ? "Аль хэдийн өлгөгдсөн" : formatMnt(o.price)}</b>
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}

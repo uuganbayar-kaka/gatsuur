@@ -1,5 +1,5 @@
 "use client";
-import type { OrnamentId, TemplateId } from "@/lib/config";
+import { ORNAMENTS, PREMIUM_PRICE, type OrnamentId, type TemplateId } from "@/lib/config";
 import { OrnamentDefs, OrnamentShape } from "./Ornament";
 
 type GiftLite = { id: string; ornament: OrnamentId; from: string };
@@ -124,6 +124,31 @@ function garlandPath(cx: number, t: Tier, top: number, flip: boolean) {
   return `M${xl} ${yl} Q${cx} ${(yl + yr) / 2 + 16} ${xr} ${yr}`;
 }
 
+const PREMIUM = new Set(ORNAMENTS.filter((o) => o.price >= PREMIUM_PRICE).map((o) => o.id));
+
+/** 10,000₮-ийн чимэглэлийн нэмэлт эффект: судалтай гэрэл, эргэлдэх од, долгион. */
+function PremiumFx({ seed }: { seed: number }) {
+  const delay = `${(seed % 30) / 10}s`;
+  return (
+    <g pointerEvents="none">
+      <circle r="24" fill="url(#o-aura)" className="aura" style={{ animationDelay: delay }} />
+      <circle r="15" fill="none" stroke="#FFE7A0" strokeWidth="1.4" className="ripple" style={{ animationDelay: delay }} />
+      <g className="orbit" style={{ animationDelay: `-${delay}` }}>
+        {/* bbox-г төвд нь тэгшлэх үл үзэгдэх тойрог (эргэлтийн төв = чимэглэлийн төв) */}
+        <circle r="25" fill="none" />
+        {[0, 120, 240].map((a, i) => (
+          <path
+            key={a}
+            transform={`rotate(${a}) translate(0 -21) scale(${i ? 0.7 : 1})`}
+            d="M0 -3.5 L.9 -.9 L3.5 0 L.9 .9 L0 3.5 L-.9 .9 L-3.5 0 L-.9 -.9Z"
+            fill="#FFF6D0"
+          />
+        ))}
+      </g>
+    </g>
+  );
+}
+
 const hash = (s: string) => {
   let h = 0;
   for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) | 0;
@@ -150,6 +175,7 @@ export default function TreeArt({
   onPick,
   showEmpty = true,
   zoom = false,
+  topperId,
 }: {
   template: TemplateId;
   capacity: number;
@@ -158,7 +184,11 @@ export default function TreeArt({
   showEmpty?: boolean;
   /** Том гацуурт чимэглэл хэт жижгэрэхгүй байх доод өргөн (эцэг элемент хажуу тийш гүйлгэнэ) */
   zoom?: boolean;
+  /** Оройд байрлах 20,000₮-ийн онцгой чимэглэлийн gift id */
+  topperId?: string | null;
 }) {
+  const topper = topperId ? gifts.find((g) => g.id === topperId) : undefined;
+  if (topper) gifts = gifts.filter((g) => g !== topper);
   const th = THEMES[template] ?? THEMES.lush;
   const { W, H, cx, tiers, slots } = layoutTree(Math.max(capacity, gifts.length));
   const last = tiers[tiers.length - 1];
@@ -249,10 +279,31 @@ export default function TreeArt({
           />
         ))}
 
-      <g transform={`translate(${cx} ${TOP - 8})`}>
-        <circle r="26" fill="url(#o-halo)" className="twinkle" />
-        <OrnamentShape id="star" />
-      </g>
+      {topper ? (
+        <g transform={`translate(${cx} ${TOP - 14})`}>
+          <g
+            className="topper"
+            onClick={onPick ? () => onPick(topper) : undefined}
+            role={onPick ? "button" : undefined}
+            aria-label={onPick ? `${topper.from}-ийн оройн чимэглэл` : undefined}
+          >
+            <circle r="46" fill="url(#o-aura)" className="halo" />
+            <g className="sparkle-ring">
+              {Array.from({ length: 8 }, (_, i) => (
+                <circle key={i} r={i % 2 ? 1.4 : 2.2} cx={Math.cos((i * Math.PI) / 4) * 36} cy={Math.sin((i * Math.PI) / 4) * 36} fill="#FFF3C4" className="twinkle" style={{ animationDelay: `${i * 0.3}s` }} />
+              ))}
+            </g>
+            <g transform="scale(1.55)">
+              <OrnamentShape id="topper" />
+            </g>
+          </g>
+        </g>
+      ) : (
+        <g transform={`translate(${cx} ${TOP - 8})`}>
+          <circle r="26" fill="url(#o-halo)" className="twinkle" />
+          <OrnamentShape id="star" />
+        </g>
+      )}
 
       {slots.map((s, i) => {
         const g = gifts[i];
@@ -279,6 +330,7 @@ export default function TreeArt({
                 <line y1="0" y2={len} stroke="#F2E2B0" strokeWidth=".8" />
                 <g transform={`translate(0 ${len + ORN_R + 4}) scale(${ORN_SCALE})`}>
                   <g className="orn-body">
+                    {PREMIUM.has(g.ornament) && <PremiumFx seed={h} />}
                     <OrnamentShape id={g.ornament} />
                     <path
                       className="glint"

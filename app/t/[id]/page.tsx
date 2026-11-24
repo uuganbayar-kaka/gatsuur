@@ -29,6 +29,7 @@ export default async function TreePage({ params }: { params: Promise<{ id: strin
     <TreeView
       tree={{ id: v.tree.id, name: v.tree.name, template: v.tree.template }}
       capacity={v.capacity}
+      topperId={v.topperId}
       gifts={v.gifts.map((g) => ({
         id: g.id,
         ornament: g.ornament,

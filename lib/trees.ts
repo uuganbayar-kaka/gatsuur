@@ -2,7 +2,7 @@ import "server-only";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { getDB } from "./db";
-import { EXPAND_PLANS, FREE_CAPACITY, ORNAMENTS, planById, planPriceBySlots, type OrnamentId, type PlanId, type TemplateId } from "./config";
+import { EXPAND_PLANS, FREE_CAPACITY, ORNAMENTS, TOPPER_ID, planById, planPriceBySlots, type OrnamentId, type PlanId, type TemplateId } from "./config";
 import { log } from "./log";
 import { createQPayInvoice, isQPayPaid, paymentMode, type QPayInvoice } from "./qpay";
 
@@ -46,6 +46,8 @@ const k = {
   gifts: (id: string) => `tree:${id}:gifts`,
   amount: (id: string) => `tree:${id}:amount`, // төлөгдсөн бэлгийн нийт дүн (INCRBY)
   updateAmount: (id: string) => `tree:${id}:update_amount`, // төлөгдсөн томруулалтын нийт дүн (INCRBY)
+  topper: (id: string) => `tree:${id}:topper`, // оройн чимэглэлийн gift id (SET NX — ганцхан)
+  topperLock: (id: string) => `tree:${id}:topper_lock`, // төлбөр хүлээгдэж буй оройн чимэглэлийн invoice (15 мин)
   credited: (invId: string) => `inv:${invId}:credited`, // дүн нэмэгдсэн тэмдэг (SET NX — нэг л удаа)
   phone: (p: string) => `phone:${p}`,
   inv: (id: string) => `inv:${id}`,
@@ -55,6 +57,7 @@ const k = {
 
 const INV_TTL = 60 * 60 * 24 * 90;
 const INV_INDEX_MAX = 5000;
+const TOPPER_LOCK_TTL = 15 * 60;
 
 const ALPHA = "abcdefghijkmnpqrstuvwxyz23456789";
 export function randomId(len = 8) {
@@ -152,8 +155,8 @@ export async function getGifts(id: string) {
 export async function getTreeView(id: string) {
   const tree = await getTree(id);
   if (!tree) return null;
-  const [capacity, gifts] = await Promise.all([getCapacity(id), getGifts(id)]);
-  return { tree, capacity, gifts };
+  const [capacity, gifts, topperId] = await Promise.all([getCapacity(id), getGifts(id), getDB().get<string>(k.topper(id))]);
+  return { tree, capacity, gifts, topperId };
 }
 
 export async function createInvoice(
@@ -178,8 +181,15 @@ export async function createInvoice(
   if (input.kind === "gift") {
     const orn = ORNAMENTS.find((o) => o.id === input.ornament);
     if (!orn) throw new AppError(400, "Чимэглэл буруу байна.");
-    const [cap, count] = await Promise.all([getCapacity(tree.id), db.hlen(k.gifts(tree.id))]);
-    if (count >= cap) throw new AppError(409, "Энэ гацуур дүүрсэн байна. Эзэн нь томруулсны дараа өлгөх боломжтой.");
+    if (orn.id === TOPPER_ID) {
+      // Оройд ганцхан: аль хэдийн байгаа эсвэл өөр хүн төлж байгаа бол татгалзана
+      if (await db.get(k.topper(tree.id))) throw new AppError(409, "Энэ гацуурын оройд онцгой чимэглэл аль хэдийн байна.");
+      if (!(await db.set(k.topperLock(tree.id), inv.id, { nx: true, ex: TOPPER_LOCK_TTL })))
+        throw new AppError(409, "Өөр хүн яг одоо оройн чимэглэлийг авч байна. Түр хүлээгээд дахин оролдоно уу.");
+    } else {
+      const [cap, count, topperId] = await Promise.all([getCapacity(tree.id), db.hlen(k.gifts(tree.id)), db.get<string>(k.topper(tree.id))]);
+      if (count - (topperId ? 1 : 0) >= cap) throw new AppError(409, "Энэ гацуур дүүрсэн байна. Эзэн нь томруулсны дараа өлгөх боломжтой.");
+    }
     inv.amount = orn.price;
     inv.gift = { ornament: orn.id, from: input.from, message: input.message };
     description = `Гацуурт бэлэг: ${orn.name}`;
@@ -192,13 +202,18 @@ export async function createInvoice(
   }
 
   if (paymentMode() === "qpay") {
-    inv.qpay = await createQPayInvoice({
-      amount: inv.amount,
-      description,
-      callbackUrl: `${baseUrl}/api/qpay/callback?inv=${inv.id}`,
-      senderInvoiceNo: inv.id,
-      phone: tree.phone,
-    });
+    try {
+      inv.qpay = await createQPayInvoice({
+        amount: inv.amount,
+        description,
+        callbackUrl: `${baseUrl}/api/qpay/callback?inv=${inv.id}`,
+        senderInvoiceNo: inv.id,
+        phone: tree.phone,
+      });
+    } catch (e) {
+      if (inv.gift?.ornament === TOPPER_ID) await db.del(k.topperLock(tree.id));
+      throw e;
+    }
   }
 
   await db.set(k.inv(inv.id), inv, { ex: INV_TTL });
@@ -223,6 +238,11 @@ export async function finalizeInvoice(inv: Invoice): Promise<Invoice> {
     // Дүнг эхэлж нэмнэ: бэлэг бичихээс өмнө тасарвал дараагийн шалгалтаар бэлэг бичигдэж, дүн давхар нэмэгдэхгүй
     await creditTreeAmount(inv);
     await db.hset(k.gifts(inv.treeId), inv.id, gift);
+    if (gift.ornament === TOPPER_ID && !(await db.set(k.topper(inv.treeId), inv.id, { nx: true }))) {
+      // Түгжээ дууссаны дараа хоёр дахь нь төлөгдсөн (маш ховор) — энгийн чимэглэл болж өлгөгдөнө
+      const cur = await db.get<string>(k.topper(inv.treeId));
+      if (cur !== inv.id) await log("warn", "topper.duplicate", undefined, { treeId: inv.treeId, invoice: inv.id, topper: cur });
+    }
   } else if (inv.kind === "expand" && inv.plan) {
     const plan = planById(inv.plan)!;
     await creditTreeAmount(inv);

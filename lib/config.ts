@@ -9,7 +9,13 @@ export type OrnamentId =
   | "bell" | "heart" | "stocking"
   | "gift" | "candle" | "snowman"
   | "star" | "lantern"
-  | "super" | "diamond";
+  | "super" | "diamond"
+  | "topper";
+
+/** 20,000₮-ийн онцгой чимэглэл — гацуурт ганцхан, оройд байрлана, багтаамжид тооцогдохгүй. */
+export const TOPPER_ID: OrnamentId = "topper";
+/** 10,000₮ ба түүнээс дээш — гацуур дээр онцгой анимацитай. */
+export const PREMIUM_PRICE = 10000;
 
 export const ORNAMENTS: { id: OrnamentId; name: string; price: number }[] = [
   { id: "ball", name: "Улаан бөмбөлөг", price: 1000 },
@@ -25,6 +31,7 @@ export const ORNAMENTS: { id: OrnamentId; name: string; price: number }[] = [
   { id: "lantern", name: "Дэнлүү", price: 5000 },
   { id: "super", name: "Супер бөмбөлөг", price: 10000 },
   { id: "diamond", name: "Очир алмаз", price: 10000 },
+  { id: "topper", name: "Оройн алтан од", price: 20000 },
 ];
 
 export type PlanId = "s" | "m" | "l";
