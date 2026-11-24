@@ -28,6 +28,7 @@ export type Invoice = {
   id: string;
   kind: "gift" | "expand";
   treeId: string;
+  phone?: string; // гацуурын эзний утас — төлөгдөхөд энэ утсаар гацуурыг олж дүнг нэмнэ
   amount: number;
   status: "pending" | "paid";
   gift?: { ornament: OrnamentId; from: string; message: string };
@@ -43,6 +44,9 @@ const k = {
   // Hash-ууд: field = invoice id → давхар төлбөр баталгаажсан ч нэг л удаа бичигдэнэ (idempotent)
   expands: (id: string) => `tree:${id}:expands`,
   gifts: (id: string) => `tree:${id}:gifts`,
+  amount: (id: string) => `tree:${id}:amount`, // төлөгдсөн бэлгийн нийт дүн (INCRBY)
+  updateAmount: (id: string) => `tree:${id}:update_amount`, // төлөгдсөн томруулалтын нийт дүн (INCRBY)
+  credited: (invId: string) => `inv:${invId}:credited`, // дүн нэмэгдсэн тэмдэг (SET NX — нэг л удаа)
   phone: (p: string) => `phone:${p}`,
   inv: (id: string) => `inv:${id}`,
   invIndex: "invoices:index", // list: шинэ нэхэмжлэх эхэнд (админ жагсаалтад, сүүлийн 5000)
@@ -164,6 +168,7 @@ export async function createInvoice(
     id: randomId(12),
     kind: input.kind,
     treeId: input.treeId,
+    phone: tree.phone,
     amount: 0,
     status: "pending",
     createdAt: Date.now(),
@@ -215,9 +220,12 @@ export async function finalizeInvoice(inv: Invoice): Promise<Invoice> {
   const db = getDB();
   if (inv.kind === "gift" && inv.gift) {
     const gift: Gift = { id: inv.id, ...inv.gift, amount: inv.amount, createdAt: inv.createdAt };
+    // Дүнг эхэлж нэмнэ: бэлэг бичихээс өмнө тасарвал дараагийн шалгалтаар бэлэг бичигдэж, дүн давхар нэмэгдэхгүй
+    await creditTreeAmount(inv);
     await db.hset(k.gifts(inv.treeId), inv.id, gift);
   } else if (inv.kind === "expand" && inv.plan) {
     const plan = EXPAND_PLANS.find((p) => p.id === inv.plan)!;
+    await creditTreeAmount(inv);
     await db.hset(k.expands(inv.treeId), inv.id, plan.slots);
   }
   inv.status = "paid";
@@ -225,6 +233,56 @@ export async function finalizeInvoice(inv: Invoice): Promise<Invoice> {
   await db.set(k.inv(inv.id), inv, { ex: INV_TTL });
   await log("info", "invoice.paid", undefined, { id: inv.id, kind: inv.kind, treeId: inv.treeId, amount: inv.amount, mode: paymentMode() });
   return inv;
+}
+
+/**
+ * Төлөгдсөн дүнг гацуурт нэмнэ: бэлэг → `amount`, томруулалт → `update_amount` (тусдаа харагдана).
+ * 1 утас = 1 гацуур тул invoice-ийн утсаар гацуурыг олно.
+ * `inv:<id>:credited` SET NX — callback, polling давхар ирсэн ч нэг л удаа нэмэгдэнэ.
+ */
+async function creditTreeAmount(inv: Invoice) {
+  const db = getDB();
+  const phone = inv.phone ?? (await getTree(inv.treeId))?.phone;
+  const treeId = phone ? await getTreeIdByPhone(phone) : null;
+  if (!treeId) {
+    await log("error", "tree.amount_no_tree", undefined, { invoice: inv.id, phone });
+    return;
+  }
+  if (treeId !== inv.treeId) await log("warn", "tree.amount_tree_mismatch", undefined, { invoice: inv.id, treeId, invTreeId: inv.treeId });
+  const counter = inv.kind === "gift" ? "amount" : "update_amount";
+  await ensureCounters(treeId, inv.id);
+  if (!(await db.set(k.credited(inv.id), 1, { nx: true, ex: INV_TTL }))) return;
+  const total = await db.incrby(counter === "amount" ? k.amount(treeId) : k.updateAmount(treeId), inv.amount);
+  await log("info", "tree.amount_added", undefined, { treeId, invoice: inv.id, counter, added: inv.amount, total });
+}
+
+/**
+ * Энэ өөрчлөлтөөс өмнөх гацуурт тоолуур байхгүй бол одоо байгаа бэлэг/томруулалтаас (энэ invoice-оос бусад) эхлүүлнэ.
+ * Томруулалтын hash-д зөвхөн зайн тоо байдаг тул багцын үнээр тооцно.
+ */
+async function ensureCounters(treeId: string, exceptInvoice?: string) {
+  const db = getDB();
+  const [amount, updateAmount] = await Promise.all([db.get<number>(k.amount(treeId)), db.get<number>(k.updateAmount(treeId))]);
+  if (amount === null) {
+    const gifts = Object.values(await db.hgetall<Gift>(k.gifts(treeId)));
+    const sum = gifts.filter((g) => g.id !== exceptInvoice).reduce((s, g) => s + giftAmount(g), 0);
+    await db.set(k.amount(treeId), sum, { nx: true });
+  }
+  if (updateAmount === null) {
+    const expands = Object.entries(await db.hgetall<number>(k.expands(treeId)));
+    const sum = expands
+      .filter(([id]) => id !== exceptInvoice)
+      .reduce((s, [, slots]) => s + (EXPAND_PLANS.find((p) => p.slots === Number(slots))?.price ?? 0), 0);
+    await db.set(k.updateAmount(treeId), sum, { nx: true });
+  }
+}
+
+/** Гацуурын төлөгдсөн дүн: бэлэг (`amount`), томруулалт (`update_amount`). */
+export async function getTreeAmounts(treeId: string) {
+  await ensureCounters(treeId);
+  const db = getDB();
+  const [amount, updateAmount] = await Promise.all([db.get<number>(k.amount(treeId)), db.get<number>(k.updateAmount(treeId))]);
+  return { amount: Number(amount ?? 0), update_amount: Number(updateAmount ?? 0) };
 }
 
 /** QPay-с төлбөрийн төлөвийг шалгаж, төлөгдсөн бол хэрэгжүүлнэ. */
@@ -261,6 +319,7 @@ export type AdminTreeRow = {
   createdAt: number;
   giftCount: number;
   giftAmount: number;
+  updateAmount: number;
   capacity: number;
 };
 
@@ -273,13 +332,15 @@ export async function listTreesForAdmin(): Promise<AdminTreeRow[]> {
       ids.slice(i, i + 25).map(async (id) => {
         const v = await getTreeView(id);
         if (!v) return null;
+        const amounts = await getTreeAmounts(id);
         return {
           id,
           name: v.tree.name,
           phone: v.tree.phone,
           createdAt: v.tree.createdAt,
           giftCount: v.gifts.length,
-          giftAmount: v.gifts.reduce((s, g) => s + giftAmount(g), 0),
+          giftAmount: amounts.amount,
+          updateAmount: amounts.update_amount,
           capacity: v.capacity,
         };
       }),

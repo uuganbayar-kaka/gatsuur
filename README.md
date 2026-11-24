@@ -64,6 +64,9 @@ Callback-д шууд итгэхгүй, QPay-с дахин шалгаж бата�
 | `phone:<утас>` | string | гацуурын id (SET NX — давхардахгүй) |
 | `tree:<id>:gifts` | hash | invoice id → бэлэг |
 | `tree:<id>:expands` | hash | invoice id → нэмэгдсэн зай |
+| `tree:<id>:amount` | number | төлөгдсөн бэлгийн нийт дүн — invoice paid болоход invoice-ийн утсаар гацуурыг олж INCRBY |
+| `tree:<id>:update_amount` | number | төлөгдсөн томруулалтын нийт дүн (бэлгийн дүнгээс тусдаа) |
+| `inv:<id>:credited` | flag (90 хоног) | дүн нэмэгдсэн тэмдэг (SET NX — давхар нэмэхгүй) |
 | `inv:<id>` | JSON (90 хоног) | нэхэмжлэх, төлөв |
 | `invoices:index` | list (сүүлийн 5000) | нэхэмжлэхийн id (админ жагсаалт) |
 | `reset:<rid>` | JSON (20 мин) | PIN сэргээх хүсэлт ↔ verify.mn sessionId |

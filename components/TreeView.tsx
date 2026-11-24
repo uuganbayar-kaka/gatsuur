@@ -6,6 +6,7 @@ import { EXPAND_PLANS, FREE_CAPACITY, ORNAMENTS, formatMnt, type OrnamentId, typ
 import { OrnamentIcon } from "./Ornament";
 import PaySheet, { type PublicInvoice } from "./PaySheet";
 import Papercut from "./Papercut";
+import OpenNotice from "./OpenNotice";
 import Snow from "./Snow";
 import TemplatePicker from "./TemplatePicker";
 import TreeArt from "./TreeArt";
@@ -92,6 +93,7 @@ export default function TreeView({
         <div className="count">
           🎁 <b>{gifts.length}</b> / {capacity} бэлэг чимэглэл өлгөгдсөн
         </div>
+        <OpenNotice owner={isOwner} />
       </header>
 
       <div className="stage">
@@ -268,6 +270,7 @@ function GiftForm({
         Мэндчилгээ <small>(зөвхөн эзэн нь уншина)</small>
         <textarea className="input" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={300} placeholder="Шинэ оны мэнд хүргэе! 🎄" />
       </label>
+      <OpenNotice compact />
       {err && <div className="err">{err}</div>}
       <button className="btn primary" disabled={busy}>
         {busy ? "Түр хүлээнэ үү…" : `Төлөх · ${formatMnt(selected.price)}`}

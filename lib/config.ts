@@ -1,5 +1,9 @@
 export const FREE_CAPACITY = 8;
 
+/** Бэлэг задлах өдөр (Улаанбаатарын цагаар шөнө дунд). */
+export const GIFT_OPEN_DATE = "2027-01-01";
+export const GIFT_OPEN_AT = Date.parse(`${GIFT_OPEN_DATE}T00:00:00+08:00`);
+
 export type OrnamentId = "ball" | "candy" | "bell" | "gift" | "star" | "super";
 
 export const ORNAMENTS: { id: OrnamentId; name: string; price: number }[] = [

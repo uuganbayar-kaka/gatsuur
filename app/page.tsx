@@ -31,7 +31,7 @@ export default async function Home() {
       <div className="actions">
         <Link className="link" href="/login">Гацуур аль хэдийн байгаа юу? Нэвтрэх →</Link>
       </div>
-      <footer className="footer">© {new Date().getFullYear()} Шинэ жилийн гацуур</footer>
+      <footer className="footer">© {new Date().getFullYear()} KubConn</footer>
     </main>
   );
 }

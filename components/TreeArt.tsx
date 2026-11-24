@@ -20,10 +20,29 @@ const THEMES: Record<TemplateId, Theme> = {
   snowy: { top: "#3D8F7E", bottom: "#17665A", snow: 0.95, trunk: "#5A3A24" },
 };
 
-const T = 56;
+const T = 62;
 const TOP = 70;
+const ORN_SCALE = 0.8;
+const ORN_R = 13 * ORN_SCALE; // чимэглэлийн радиус (~)
 
-/** Мөр бүрт r+2 байрлал; нийт n болтол мөр нэмнэ. */
+/** Мөчрийн муруй (cx,yA) → (cx+hw,yB) дээрх y өндөр дэх хагас өргөн. */
+function halfAt(t: { yA: number; yB: number; hw: number }, y: number) {
+  const cy = t.yA + (t.yB - t.yA) * 0.62;
+  // y(s) = (1-s)²yA + 2(1-s)s·cy + s²yB — s-г хоёртын хайлтаар олно
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 20; i++) {
+    const s = (lo + hi) / 2;
+    const ys = (1 - s) ** 2 * t.yA + 2 * (1 - s) * s * cy + s * s * t.yB;
+    if (ys < y) lo = s;
+    else hi = s;
+  }
+  const s = (lo + hi) / 2;
+  return 2 * (1 - s) * s * t.hw * 0.35 + s * s * t.hw;
+}
+
+export type Slot = { x: number; y: number; hookY: number; tier: number };
+
+/** Мөр бүрт r+2 байрлал; нийт n болтол мөр нэмнэ. Чимэглэл мөчрийн харагдах хэсэгт багтаж, дээд мөчрөөс унжина. */
 export function layoutTree(n: number) {
   let rows = 3;
   const sum = (R: number) => (R * (R + 3)) / 2;
@@ -36,21 +55,44 @@ export function layoutTree(n: number) {
     yB: TOP + (r + 1) * T * 0.78 + T * 0.45,
     hw: hw(r),
   }));
-  const slots: { x: number; y: number }[] = [];
-  let left = n;
+  // Мөр бүрт өргөнтэй нь пропорциональ тоо (доод мөчирт ганц нэг үлдэхгүй)
+  const counts = tiers.map((_, r) => Math.max(1, Math.floor(((r + 2) * n) / sum(rows))));
+  for (let r = rows - 1, extra = n - counts.reduce((a, b) => a + b, 0); extra > 0; r = r ? r - 1 : rows - 1, extra--) counts[r]++;
+  const slots: Slot[] = [];
   tiers.forEach((t, r) => {
-    const c = r === rows - 1 ? left : Math.min(left, r + 2);
-    left -= c;
-    const span = t.hw * 0.72;
+    const c = counts[r];
+    // Харагдах зурвас: дээд мөчрийн цасан ирмэгээс доош, өөрийн ирмэгээс дээш
+    const bandTop = r ? tiers[r - 1].yB + 6 : t.yA + (t.yB - t.yA) * 0.48;
+    const bandBot = t.yB - 6;
+    const mid = (bandTop + bandBot) / 2;
+    const wobble = Math.max(0, (bandBot - bandTop) / 2 - ORN_R - 1);
     for (let i = 0; i < c; i++) {
+      const y = mid + (i % 2 ? -wobble : wobble) * (c > 1 ? 1 : 0);
+      const span = Math.max(0, halfAt(t, y + ORN_R) - ORN_R - 9);
       const x = c === 1 ? cx : cx - span + (2 * span * i) / (c - 1);
-      const edge = 1 - Math.abs(x - cx) / t.hw;
-      slots.push({ x, y: t.yB - 18 - (i % 2) * 7 - (1 - edge) * 6 });
+      slots.push({ x, y, hookY: bandTop - 7, tier: r });
     }
   });
   const H = tiers[rows - 1].yB + 56;
-  return { W, H, cx, tiers, slots };
+  // Дүүргэх дараалал: дээрээс доош биш, бүх мөчрөөр тархаж дүүрнэ (алтан огтлолын алхам)
+  const order = slots.map((_, i) => i).sort((a, b) => ((a * 0.618034) % 1) - ((b * 0.618034) % 1));
+  return { W, H, cx, tiers, slots: order.map((i) => slots[i]) };
 }
+
+/** Мөчир дээгүүр хөндлөн унжих сувдан гирлянд (мөр бүрт чиглэл ээлжилнэ). */
+function garlandPath(cx: number, t: { yA: number; yB: number; hw: number }, top: number, flip: boolean) {
+  const yl = flip ? t.yB - 9 : top + 2;
+  const yr = flip ? top + 2 : t.yB - 9;
+  const xl = cx - halfAt(t, yl) + 5;
+  const xr = cx + halfAt(t, yr) - 5;
+  return `M${xl} ${yl} Q${cx} ${(yl + yr) / 2 + 16} ${xr} ${yr}`;
+}
+
+const hash = (s: string) => {
+  let h = 0;
+  for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return Math.abs(h);
+};
 
 function tierPath(cx: number, yA: number, yB: number, hw: number, bumps: number) {
   let d = `M${cx} ${yA} Q${cx + hw * 0.35} ${yA + (yB - yA) * 0.62} ${cx + hw} ${yB}`;
@@ -157,6 +199,17 @@ export default function TreeArt({
         );
       })}
 
+      {!th.lights &&
+        tiers.map((t, r) => (
+          <path
+            key={`gl${r}`}
+            d={garlandPath(cx, t, r ? tiers[r - 1].yB + 4 : t.yA + (t.yB - t.yA) * 0.4, r % 2 === 1)}
+            className="garland"
+            stroke={th.paper ? "#fff" : "#F2C14E"}
+            strokeOpacity={th.paper ? 0.75 : 0.9}
+          />
+        ))}
+
       <g transform={`translate(${cx} ${TOP - 8})`}>
         <circle r="26" fill="url(#o-halo)" className="twinkle" />
         <OrnamentShape id="star" />
@@ -164,20 +217,41 @@ export default function TreeArt({
 
       {slots.map((s, i) => {
         const g = gifts[i];
+        const len = s.y - ORN_R - 4 - s.hookY;
         if (!g)
           return showEmpty ? (
-            <circle key={`e${i}`} cx={s.x} cy={s.y} r="6" fill="#fff" fillOpacity=".12" stroke="#fff" strokeOpacity=".4" strokeDasharray="2 2.5" />
+            <g key={`e${i}`} className="slot" transform={`translate(${s.x} ${s.y})`}>
+              <circle r={ORN_R - 2} fill="#fff" fillOpacity=".1" stroke="#fff" strokeOpacity=".45" strokeDasharray="2 2.5" />
+              <path d="M-2.5 -1 L2.5 -1 M0 -3.5 L0 1.5" stroke="#fff" strokeOpacity=".5" strokeWidth="1.2" strokeLinecap="round" />
+            </g>
           ) : null;
+        const h = hash(g.id);
         return (
-          <g
-            key={g.id}
-            transform={`translate(${s.x} ${s.y})`}
-            onClick={onPick ? () => onPick(g) : undefined}
-            style={{ cursor: onPick ? "pointer" : undefined }}
-          >
-            <line y1="-24" y2="-14" stroke="#F2E2B0" strokeWidth=".8" />
-            <g className="orn" style={{ animationDelay: `${Math.min(i, 20) * 0.04}s` }}>
-              <OrnamentShape id={g.ornament} />
+          <g key={g.id} transform={`translate(${s.x} ${s.hookY})`}>
+            <g className="drop" style={{ animationDelay: `${Math.min(i, 24) * 0.07}s` }}>
+              <g
+                className="swing"
+                style={{ animationDuration: `${3.4 + (h % 15) / 10}s`, animationDelay: `-${(h % 37) / 10}s` }}
+                onClick={onPick ? () => onPick(g) : undefined}
+                role={onPick ? "button" : undefined}
+                aria-label={onPick ? `${g.from}-ийн бэлэг` : undefined}
+              >
+                <circle cy="0" r="1.6" fill="#E2B34A" />
+                <line y1="0" y2={len} stroke="#F2E2B0" strokeWidth=".8" />
+                <g transform={`translate(0 ${len + ORN_R + 4}) scale(${ORN_SCALE})`}>
+                  <g className="orn-body">
+                    <OrnamentShape id={g.ornament} />
+                    <path
+                      className="glint"
+                      style={{ animationDelay: `${(h % 50) / 10}s` }}
+                      d="M7 -12 L8 -9 L11 -8 L8 -7 L7 -4 L6 -7 L3 -8 L6 -9Z"
+                      fill="#fff"
+                    />
+                  </g>
+                </g>
+                {/* Дарах талбайг томруулна */}
+                <circle cy={len + ORN_R + 4} r={ORN_R + 6} fill="transparent" />
+              </g>
             </g>
           </g>
         );

@@ -20,10 +20,12 @@ export default async function AdminTrees({ searchParams }: { searchParams: Promi
   const needle = q.trim().toLowerCase();
   if (needle) rows = rows.filter((r) => r.name.toLowerCase().includes(needle) || r.phone.includes(needle));
   if (sort === "amount") rows.sort((a, b) => b.giftAmount - a.giftAmount);
+  if (sort === "update") rows.sort((a, b) => b.updateAmount - a.updateAmount);
   if (sort === "gifts") rows.sort((a, b) => b.giftCount - a.giftCount);
 
   const totalGifts = rows.reduce((s, r) => s + r.giftCount, 0);
   const totalAmount = rows.reduce((s, r) => s + r.giftAmount, 0);
+  const totalUpdate = rows.reduce((s, r) => s + r.updateAmount, 0);
   const sortLink = (s: string) => `/admin?${new URLSearchParams({ ...(q ? { q } : {}), sort: s })}`;
 
   return (
@@ -34,6 +36,7 @@ export default async function AdminTrees({ searchParams }: { searchParams: Promi
         <div><small>Гацуур</small><b>{rows.length}</b></div>
         <div><small>Нийт бэлэг</small><b>{totalGifts}</b></div>
         <div><small>Бэлгийн нийт дүн</small><b>{formatMnt(totalAmount)}</b></div>
+        <div><small>Томруулалтын дүн</small><b>{formatMnt(totalUpdate)}</b></div>
       </div>
 
       <form className="admin-search">
@@ -50,7 +53,8 @@ export default async function AdminTrees({ searchParams }: { searchParams: Promi
               <th>Гацуурын нэр</th>
               <th>Утас</th>
               <th className="num"><Link href={sortLink("gifts")}>Бэлэг {sort === "gifts" && "↓"}</Link></th>
-              <th className="num"><Link href={sortLink("amount")}>Нийт дүн {sort === "amount" && "↓"}</Link></th>
+              <th className="num"><Link href={sortLink("amount")}>Бэлгийн дүн {sort === "amount" && "↓"}</Link></th>
+              <th className="num"><Link href={sortLink("update")}>Томруулалт {sort === "update" && "↓"}</Link></th>
               <th><Link href={sortLink("new")}>Үүсгэсэн {sort === "new" && "↓"}</Link></th>
             </tr>
           </thead>
@@ -62,11 +66,12 @@ export default async function AdminTrees({ searchParams }: { searchParams: Promi
                 <td className="mono">{r.phone}</td>
                 <td className="num">{r.giftCount} <span className="muted">/ {r.capacity}</span></td>
                 <td className="num"><b>{formatMnt(r.giftAmount)}</b></td>
+                <td className="num">{formatMnt(r.updateAmount)}</td>
                 <td className="muted">{fmtDate(r.createdAt)}</td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="muted" style={{ textAlign: "center", padding: 24 }}>Гацуур алга</td></tr>
+              <tr><td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>Гацуур алга</td></tr>
             )}
           </tbody>
         </table>
