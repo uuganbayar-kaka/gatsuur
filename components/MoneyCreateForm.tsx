@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { BANKS, MONEY_ORNAMENTS, MONEY_TREE_PRICE, formatMnt, type BankId, type TemplateId } from "@/lib/config";
+import { BANKS, MONEY_ORNAMENTS, MONEY_PAYOUT_DATE, MONEY_TREE_PRICE, formatMnt, type BankId, type TemplateId } from "@/lib/config";
 import { OrnamentIcon } from "./Ornament";
 import PaySheet, { type PublicInvoice } from "./PaySheet";
 import TemplatePicker from "./TemplatePicker";
@@ -58,7 +58,7 @@ export default function MoneyCreateForm() {
             </div>
           ))}
         </div>
-        <p>Зочид 1,000₮ – 20,000₮ эсвэл хүссэн дүнгээрээ мөнгөн чимэглэл өлгөнө. Цугласан мөнгийг таны бүртгүүлсэн данс руу шилжүүлнэ.</p>
+        <p>Зочид 1,000₮ – 20,000₮ эсвэл хүссэн дүнгээрээ мөнгөн чимэглэл өлгөнө. Цугласан мөнгийг <b>{MONEY_PAYOUT_DATE}</b>-нд таны бүртгүүлсэн данс руу шилжүүлнэ.</p>
       </div>
 
       <div className="form-label">
@@ -102,7 +102,7 @@ export default function MoneyCreateForm() {
           Дансны дугаар
           <input className="input" value={account} onChange={(e) => setAccount(e.target.value.replace(/[^\dA-Za-z\s-]/g, "").slice(0, 26))} inputMode="numeric" placeholder="5000123456" required />
         </label>
-        <p className="note-muted">Дансны дугаараа сайн шалгаарай — цугласан мөнгийг энэ данс руу шилжүүлнэ. Дансны мэдээлэл бусдад харагдахгүй.</p>
+        <p className="note-muted">Дансны дугаараа сайн шалгаарай — цугласан мөнгийг {MONEY_PAYOUT_DATE}-нд энэ данс руу шилжүүлнэ. Дансны мэдээлэл бусдад харагдахгүй.</p>
         {err && <div className="err">{err}</div>}
         <button className="btn festive" disabled={busy}>
           {busy ? "Түр хүлээнэ үү…" : `💰 Мөнгөтэй гацуур үүсгэх · ${formatMnt(MONEY_TREE_PRICE)}`}

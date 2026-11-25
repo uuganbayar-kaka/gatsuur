@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CUSTOM_MAX, CUSTOM_MIN, EXPAND_PLANS, MONEY_TEMPLATES, isMoneyTemplate, FREE_CAPACITY, GIFT_OPEN_DATE, MONEY_ORNAMENTS, ORNAMENTS, PREMIUM_PRICE, TOPPER_ID, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
+import { CUSTOM_MAX, CUSTOM_MIN, EXPAND_PLANS, MONEY_PAYOUT_DATE, MONEY_TEMPLATES, isMoneyTemplate, FREE_CAPACITY, GIFT_OPEN_DATE, MONEY_ORNAMENTS, ORNAMENTS, PREMIUM_PRICE, TOPPER_ID, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
 import { OrnamentIcon } from "./Ornament";
 import PaySheet, { type PublicInvoice } from "./PaySheet";
 import Papercut from "./Papercut";
@@ -195,7 +195,9 @@ export default function TreeView({
               <div className="card">
                 <h4>💰 Цугласан мөнгө</h4>
                 <div className="money-total">{formatMnt(money.received ?? 0)}</div>
-                <p>Шилжүүлэх данс: <b>{money.payout}</b></p>
+                <p>
+                  Мөнгө <b>{MONEY_PAYOUT_DATE}</b>-нд таны данс руу орно: <b>{money.payout}</b>
+                </p>
               </div>
             )}
             <div className="card">

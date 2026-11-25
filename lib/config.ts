@@ -37,6 +37,8 @@ export const ORNAMENTS: { id: OrnamentId; name: string; price: number }[] = [
 
 /** Мөнгөтэй гацуур — үүсгэх үнэ. */
 export const MONEY_TREE_PRICE = 15000;
+/** Мөнгөтэй гацуурт цугласан мөнгийг эзний данс руу шилжүүлэх өдөр. */
+export const MONEY_PAYOUT_DATE = "2027-12-31";
 
 /** Мөнгөтэй гацуурын мөнгөн чимэглэл. "custom" — зочин дүнгээ өөрөө оруулна. */
 export const MONEY_ORNAMENTS: { id: OrnamentId; name: string; price: number }[] = [

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import AdminNav from "@/components/AdminNav";
 import { getAdmin } from "@/lib/admin";
-import { bankName, formatMnt } from "@/lib/config";
+import { MONEY_PAYOUT_DATE, bankName, formatMnt } from "@/lib/config";
 import { listTreesForAdmin } from "@/lib/trees";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function AdminMoneyTrees({ searchParams }: { searchParams: 
       <div className="admin-stats">
         <div><small>Мөнгөтэй гацуур</small><b>{rows.length}</b></div>
         <div><small>Мөнгөн чимэглэл</small><b>{totalGifts}</b></div>
-        <div><small>Цугласан дүн (шилжүүлэх)</small><b>{formatMnt(totalAmount)}</b></div>
+        <div><small>Цугласан дүн ({MONEY_PAYOUT_DATE}-нд шилжүүлэх)</small><b>{formatMnt(totalAmount)}</b></div>
         <div><small>Үүсгэх төлбөр</small><b>{formatMnt(totalFees)}</b></div>
       </div>
 

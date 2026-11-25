@@ -2,6 +2,7 @@ import Link from "next/link";
 import MoneyCreateForm from "@/components/MoneyCreateForm";
 import Papercut from "@/components/Papercut";
 import Snow from "@/components/Snow";
+import { MONEY_PAYOUT_DATE } from "@/lib/config";
 
 export const metadata = { title: "Мөнгөтэй гацуур · Шинэ жилийн гацуур" };
 
@@ -15,7 +16,7 @@ export default function MoneyPage() {
       </div>
       <header className="head">
         <div className="title">Мөнгөтэй гацуур</div>
-        <div className="sub">Найзууд чинь мөнгөн чимэглэл өлгөж, мөнгө нь таны данс руу орно.</div>
+        <div className="sub">Найзууд чинь мөнгөн чимэглэл өлгөж, мөнгө нь {MONEY_PAYOUT_DATE}-нд таны данс руу орно.</div>
       </header>
       <MoneyCreateForm />
     </main>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import CreateForm from "@/components/CreateForm";
 import Papercut from "@/components/Papercut";
 import Snow from "@/components/Snow";
+import { MONEY_PAYOUT_DATE } from "@/lib/config";
 import { getSessionTreeId } from "@/lib/session";
 
 export default async function Home() {
@@ -32,7 +33,7 @@ export default async function Home() {
         <Link className="btn money" href="/money">
           💰 Мөнгөтэй гацуур үүсгэх · 15,000₮
         </Link>
-        <p className="hint-pill">Найзууд чинь мөнгөн чимэглэл өлгөж, мөнгө нь таны данс руу орно</p>
+        <p className="hint-pill">Найзууд чинь мөнгөн чимэглэл өлгөж, мөнгө нь {MONEY_PAYOUT_DATE}-нд таны данс руу орно</p>
         <Link className="link" href="/login">Гацуур аль хэдийн байгаа юу? Нэвтрэх →</Link>
       </div>
       <footer className="footer">© {new Date().getFullYear()} KubConn</footer>
