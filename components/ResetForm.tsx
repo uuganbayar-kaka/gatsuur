@@ -74,7 +74,8 @@ export default function ResetForm({ initialPhone = "" }: { initialPhone?: string
       setBusy(false);
       return setErr(error);
     }
-    router.push(`/t/${(data as { id: string }).id}`);
+    const d = data as { id: string; count?: number };
+    router.push((d.count ?? 1) > 1 ? "/my" : `/t/${d.id}`);
     router.refresh();
   }
 

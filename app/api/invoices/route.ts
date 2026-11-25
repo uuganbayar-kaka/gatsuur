@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { EXPAND_PLANS, findOrnament } from "@/lib/config";
 import { baseUrl, clientIp, handle } from "@/lib/http";
-import { getSessionTreeId } from "@/lib/session";
+import { isTreeOwner } from "@/lib/session";
 import { AppError, clean, createInvoice, publicInvoice, rateLimit } from "@/lib/trees";
 
 export async function POST(req: Request) {
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     if (body.kind === "expand") {
-      if ((await getSessionTreeId()) !== treeId) throw new AppError(403, "Зөвхөн эзэн нь гацуураа томруулна.");
+      if (!(await isTreeOwner(treeId))) throw new AppError(403, "Зөвхөн эзэн нь гацуураа томруулна.");
       const plan = EXPAND_PLANS.find((p) => p.id === body.plan);
       if (!plan) throw new AppError(400, "Багцаа сонгоно уу.");
       const inv = await createInvoice({ kind: "expand", treeId, plan: plan.id }, baseUrl(req));

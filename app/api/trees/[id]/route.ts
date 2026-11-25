@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { templateFits } from "@/lib/config";
 import { handle } from "@/lib/http";
-import { getSessionTreeId } from "@/lib/session";
+import { isTreeOwner } from "@/lib/session";
 import { AppError, getTree, setTemplate } from "@/lib/trees";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   return handle(req, async () => {
     const { id } = await ctx.params;
-    if ((await getSessionTreeId()) !== id) throw new AppError(403, "Зөвхөн эзэн нь өөрчилнө.");
+    if (!(await isTreeOwner(id))) throw new AppError(403, "Зөвхөн эзэн нь өөрчилнө.");
     const body = await req.json().catch(() => ({}));
     const tree = await getTree(id);
     if (!tree) throw new AppError(404, "Гацуур олдсонгүй.");

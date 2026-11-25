@@ -10,8 +10,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ rid: string }>
     const body = await req.json().catch(() => ({}));
     const pin = typeof body.pin === "string" ? body.pin : "";
     if (!/^\d{4}$/.test(pin)) throw new AppError(400, "PIN код 4 оронтой тоо байна.");
-    const treeId = await completeReset(rid, pin);
-    await setSession(treeId); // шинэ PIN тохируулмагц шууд нэвтрүүлнэ
-    return NextResponse.json({ id: treeId });
+    const ids = await completeReset(rid, pin);
+    await setSession(ids); // шинэ PIN тохируулмагц шууд нэвтрүүлнэ (энгийн + мөнгөтэй гацуур)
+    return NextResponse.json({ id: ids[0], count: ids.length });
   });
 }

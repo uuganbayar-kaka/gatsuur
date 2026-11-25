@@ -10,6 +10,7 @@ export interface DB {
   del(key: string): Promise<void>;
   incrby(key: string, n: number): Promise<number>;
   hset(key: string, field: string, value: unknown): Promise<void>;
+  hget<T>(key: string, field: string): Promise<T | null>;
   hgetall<T>(key: string): Promise<Record<string, T>>;
   hlen(key: string): Promise<number>;
   lpush(key: string, value: unknown): Promise<void>;
@@ -38,6 +39,7 @@ function redisDB(url: string, token: string): DB {
     async hset(k, f, v) {
       await r.hset(k, { [f]: v });
     },
+    hget: (k, f) => r.hget(k, f),
     async hgetall<T>(k: string) {
       return ((await r.hgetall<Record<string, T>>(k)) ?? {}) as Record<string, T>;
     },
@@ -98,6 +100,10 @@ function memoryDB(): DB {
     },
     async hset(k, f, v) {
       hash(k)[f] = clone(v);
+    },
+    async hget(k, f) {
+      const v = hash(k)[f];
+      return v === undefined ? null : (clone(v) as never);
     },
     async hgetall(k) {
       return clone(hash(k)) as never;

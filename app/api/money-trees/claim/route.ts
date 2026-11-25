@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/http";
-import { clearPendingCreate, getPendingCreate, setSession } from "@/lib/session";
-import { AppError, getInvoice, getTree, syncInvoice } from "@/lib/trees";
+import { addSessionTree, clearPendingCreate, getPendingCreate } from "@/lib/session";
+import { AppError, getInvoice, getTree, syncInvoice, treePhone } from "@/lib/trees";
 
 // Төлбөр орсны дараа үүсгэгчийн хөтчийг шинэ мөнгөтэй гацуурт нэвтрүүлнэ (gc cookie-тэй хөтөч л).
 export async function POST(req: Request) {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const synced = await syncInvoice(inv);
     if (synced.status !== "paid") throw new AppError(402, "Төлбөр хараахан орж ирээгүй байна.");
     if (!(await getTree(synced.treeId))) throw new AppError(409, "Гацуур үүсгэхэд алдаа гарлаа. Админтай холбогдоно уу.");
-    await setSession(synced.treeId);
+    await addSessionTree(synced.treeId, treePhone); // энгийн гацуураараа нэвтэрсэн байсан бол хоёулаа сешнд үлдэнэ
     await clearPendingCreate();
     return NextResponse.json({ id: synced.treeId });
   });

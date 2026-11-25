@@ -14,7 +14,7 @@ export default async function Home() {
       <div className="bar">
         <span className="chip">🎄 Гацуур</span>
         {myId ? (
-          <Link className="chip" href={`/t/${myId}`}>Миний гацуур</Link>
+          <Link className="chip" href="/my">Миний гацуур</Link>
         ) : (
           <Link className="chip" href="/login">Нэвтрэх</Link>
         )}
@@ -25,7 +25,7 @@ export default async function Home() {
       </header>
       {myId && (
         <div className="actions">
-          <Link className="btn gold" href={`/t/${myId}`}>🎁 Миний гацуур руу орох</Link>
+          <Link className="btn gold" href="/my">🎁 Миний гацуур руу орох</Link>
         </div>
       )}
       <CreateForm />

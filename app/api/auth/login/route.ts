@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { clientIp, handle } from "@/lib/http";
 import { setSession } from "@/lib/session";
-import { AppError, login, normalizePhone, rateLimit } from "@/lib/trees";
+import { AppError, loginTrees, normalizePhone, rateLimit } from "@/lib/trees";
 
 export async function POST(req: Request) {
   return handle(req, async () => {
@@ -12,8 +12,9 @@ export async function POST(req: Request) {
     // 4 оронтой PIN-д таах оролдлогыг хатуу хязгаарлана: утас бүрт 15 минутад 5, IP бүрт 30
     await rateLimit(`login:${phone}`, 5, 900);
     await rateLimit(`login-ip:${clientIp(req)}`, 30, 900);
-    const tree = await login(phone, pin);
-    await setSession(tree.id);
-    return NextResponse.json({ id: tree.id });
+    // 1 утас = 1 энгийн + 1 мөнгөтэй гацуур — PIN таарсан бүх гацуурт нэвтэрнэ
+    const trees = await loginTrees(phone, pin);
+    await setSession(trees.map((t) => t.id));
+    return NextResponse.json({ id: trees[0].id, trees: trees.map((t) => ({ id: t.id, name: t.name, kind: t.kind ?? "free" })) });
   });
 }

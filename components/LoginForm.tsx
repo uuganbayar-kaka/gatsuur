@@ -23,7 +23,8 @@ export default function LoginForm() {
       setBusy(false);
       return setErr(j.error ?? "Алдаа гарлаа.");
     }
-    router.push(`/t/${j.id}`);
+    // Хоёр гацууртай бол (энгийн + мөнгөтэй) сонгох хуудас руу
+    router.push(j.trees?.length > 1 ? "/my" : `/t/${j.id}`);
     router.refresh();
   }
 

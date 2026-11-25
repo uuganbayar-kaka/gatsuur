@@ -8,11 +8,11 @@ import TemplatePicker from "./TemplatePicker";
 
 const onlyDigits = (v: string, n: number) => v.replace(/\D/g, "").slice(0, n);
 
-export default function MoneyCreateForm() {
+export default function MoneyCreateForm({ defaultPhone = "" }: { defaultPhone?: string }) {
   const router = useRouter();
   const [template, setTemplate] = useState<TemplateId>("gold");
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(defaultPhone);
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
   const [bank, setBank] = useState<BankId | null>(null);

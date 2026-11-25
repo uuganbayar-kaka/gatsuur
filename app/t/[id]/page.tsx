@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import TreeView from "@/components/TreeView";
 import { GIFT_OPEN_AT, bankName } from "@/lib/config";
 import { paymentMode } from "@/lib/qpay";
-import { getSessionTreeId } from "@/lib/session";
+import { isTreeOwner } from "@/lib/session";
 import { getTreeAmounts, getTreeView } from "@/lib/trees";
 
 export const dynamic = "force-dynamic";
@@ -20,9 +20,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function TreePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [v, me] = await Promise.all([getTreeView(id), getSessionTreeId()]);
+  const [v, isOwner] = await Promise.all([getTreeView(id), isTreeOwner(id)]);
   if (!v) notFound();
-  const isOwner = me === id;
   // Захидал 2027-01-01 хүртэл битүү — эзэнд ч сервер мессежийг илгээхгүй
   const opened = Date.now() >= GIFT_OPEN_AT;
   // Мөнгөтэй гацуур: цугласан дүн, данс зөвхөн эзэнд (дансны сүүлийн 4 орон)

@@ -1,7 +1,7 @@
 import "server-only";
 import { getDB } from "./db";
 import { log } from "./log";
-import { AppError, getTreeIdByPhone, randomId, setPin } from "./trees";
+import { AppError, getTreeIdsByPhone, randomId, setPin } from "./trees";
 import { createVerifySession, expiresMs, getVerifySession, VerifyError } from "./verify";
 
 /**
@@ -13,6 +13,8 @@ export type ResetRecord = {
   id: string;
   phone: string;
   treeId: string;
+  /** Утсанд бүртгэлтэй бүх гацуур (энгийн + мөнгөтэй) — PIN бүгдэд нь солигдоно */
+  treeIds?: string[];
   sessionId: string;
   expiresAt: number;
   status: "PENDING" | "VERIFIED" | "EXPIRED";
@@ -25,7 +27,8 @@ const PIN_WINDOW_MS = 10 * 60_000; // баталгаажсанаас хойш 10
 const key = (rid: string) => `reset:${rid}`;
 
 export async function startReset(phone: string, baseUrl: string) {
-  const treeId = await getTreeIdByPhone(phone);
+  const treeIds = await getTreeIdsByPhone(phone);
+  const treeId = treeIds[0];
   if (!treeId) throw new AppError(404, "Энэ дугаараар гацуур бүртгэлгүй байна.");
   const rid = randomId(16);
   let session;
@@ -38,6 +41,7 @@ export async function startReset(phone: string, baseUrl: string) {
     id: rid,
     phone,
     treeId,
+    treeIds,
     sessionId: session.sessionId,
     expiresAt: expiresMs(session.expiresAt),
     status: "PENDING",
@@ -85,6 +89,7 @@ export async function completeReset(rid: string, pin: string) {
   if (rec.status !== "VERIFIED") throw new AppError(403, "Утас баталгаажаагүй байна.");
   if (Date.now() - (rec.verifiedAt ?? 0) > PIN_WINDOW_MS) throw new AppError(410, "Хугацаа дууссан. Дахин эхлүүлнэ үү.");
   if (!(await db.set(`${key(rid)}:used`, 1, { nx: true, ex: TTL }))) throw new AppError(409, "PIN аль хэдийн солигдсон.");
-  await setPin(rec.treeId, pin);
-  return rec.treeId;
+  const ids = rec.treeIds ?? [rec.treeId];
+  for (const id of ids) await setPin(id, pin);
+  return ids;
 }

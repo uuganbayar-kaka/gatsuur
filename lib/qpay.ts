@@ -96,10 +96,24 @@ export type QPayRecord = {
   amount: number;
   sender_invoice_no: string;
   paid_date?: string;
+  /** "free" — энгийн гацуурын бэлэг/томруулалт, "money" — мөнгөтэй гацуурын мөнгө/үүсгэх төлбөр */
+  tree_kind?: "free" | "money";
+  /** gift — бэлэг/мөнгөн чимэглэл, expand — томруулалт, create — мөнгөтэй гацуур үүсгэх */
+  purpose?: "gift" | "expand" | "create";
+  tree_id?: string;
 };
 
 export const getQPayRecord = (invoiceId: string) => getDB().get<QPayRecord>(qk.invoice(invoiceId));
 export const getQPayRecordsByPhone = (phone: string) => getDB().hgetall<QPayRecord>(qk.phone(phone));
+
+/**
+ * QPay нэхэмжлэхийг invoice_id + утсаар олно (утас таарахгүй бол null).
+ * tree_kind-оор энгийн гацуурын бэлэг, мөнгөтэй гацуурын мөнгийг ялгана.
+ */
+export async function findQPayInvoice(invoiceId: string, phone: string) {
+  const rec = (await getDB().hget<QPayRecord>(qk.phone(phone), invoiceId)) ?? (await getQPayRecord(invoiceId));
+  return rec && rec.phone === phone ? rec : null;
+}
 
 async function saveRecord(rec: QPayRecord) {
   const db = getDB();
@@ -113,6 +127,9 @@ export async function createQPayInvoice(opts: {
   callbackUrl: string;
   senderInvoiceNo: string;
   phone: string;
+  treeKind?: "free" | "money";
+  purpose?: "gift" | "expand" | "create";
+  treeId?: string;
 }): Promise<QPayInvoice> {
   const body = {
     invoice_code: process.env.QPAY_INVOICE_CODE,
@@ -141,6 +158,9 @@ export async function createQPayInvoice(opts: {
     phone: opts.phone,
     amount: opts.amount,
     sender_invoice_no: opts.senderInvoiceNo,
+    tree_kind: opts.treeKind,
+    purpose: opts.purpose,
+    tree_id: opts.treeId,
   });
   return inv;
 }

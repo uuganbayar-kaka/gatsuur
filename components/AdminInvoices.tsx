@@ -9,11 +9,13 @@ const fmtDate = (t: number) =>
   new Date(t).toLocaleString("mn-MN", { timeZone: "Asia/Ulaanbaatar", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 type Filter = "all" | "pending" | "paid";
+type KindFilter = "all" | "free" | "money";
 
 export default function AdminInvoices({ initial }: { initial: AdminInvoiceRow[] }) {
   const [rows, setRows] = useState(initial);
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
+  const [kind, setKind] = useState<KindFilter>("all");
   const [live, setLive] = useState<"ok" | "err" | "paused">("ok");
   const [updated, setUpdated] = useState(Date.now());
   const [flash, setFlash] = useState<Set<string>>(new Set());
@@ -70,6 +72,7 @@ export default function AdminInvoices({ initial }: { initial: AdminInvoiceRow[] 
   const shown = rows.filter(
     (r) =>
       (filter === "all" || r.status === filter) &&
+      (kind === "all" || r.treeKind === kind) &&
       (!needle ||
         r.treeName.toLowerCase().includes(needle) ||
         r.phone.includes(needle) ||
@@ -96,6 +99,11 @@ export default function AdminInvoices({ initial }: { initial: AdminInvoiceRow[] 
           <option value="pending">Хүлээгдэж буй</option>
           <option value="paid">Төлөгдсөн</option>
         </select>
+        <select value={kind} onChange={(e) => setKind(e.target.value as KindFilter)}>
+          <option value="all">Бүх гацуур</option>
+          <option value="free">🎄 Энгийн (бэлэг)</option>
+          <option value="money">💰 Мөнгөтэй (мөнгө)</option>
+        </select>
       </div>
 
       <p className={`live live-${live}`}>
@@ -110,6 +118,7 @@ export default function AdminInvoices({ initial }: { initial: AdminInvoiceRow[] 
             <tr>
               <th>Огноо</th>
               <th>Төлөв</th>
+              <th>Гацуур төрөл</th>
               <th>Төрөл</th>
               <th>Гацуур</th>
               <th>Утас</th>
@@ -126,6 +135,7 @@ export default function AdminInvoices({ initial }: { initial: AdminInvoiceRow[] 
                   <span className={`badge ${r.status}`}>{r.status === "paid" ? "Төлөгдсөн" : "Хүлээгдэж буй"}</span>
                   {r.paidAt && <div className="muted small">{fmtDate(r.paidAt)}</div>}
                 </td>
+                <td><span className={`badge ${r.treeKind === "money" ? "money" : "free"}`}>{r.treeKind === "money" ? "💰 Мөнгөтэй" : "🎄 Энгийн"}</span></td>
                 <td>{r.item}</td>
                 <td><a href={`/t/${r.treeId}`} target="_blank" rel="noreferrer">{r.treeName}</a></td>
                 <td className="mono">{r.phone}</td>
@@ -138,7 +148,7 @@ export default function AdminInvoices({ initial }: { initial: AdminInvoiceRow[] 
               </tr>
             ))}
             {shown.length === 0 && (
-              <tr><td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>Нэхэмжлэх алга</td></tr>
+              <tr><td colSpan={9} className="muted" style={{ textAlign: "center", padding: 24 }}>Нэхэмжлэх алга</td></tr>
             )}
           </tbody>
         </table>

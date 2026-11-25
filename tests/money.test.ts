@@ -20,9 +20,10 @@ describe("мөнгөтэй гацуур", () => {
     assert.equal(inv.amount, 15000);
     assert.equal(await getTree(inv.treeId), null);
     assert.equal(await getTreeIdByPhone("88330011"), null, "түгжээ нь гацуурын id биш");
-    await assert.rejects(createTree({ name: "x", phone: "88330011", password: "1111", template: "lush" }), status(409));
+    // Мөнгөтэй гацуурын түгжээ энгийн гацуур үүсгэхэд саад болохгүй (1 утас = 1 энгийн + 1 мөнгөтэй)
+    await createTree({ name: "x", phone: "88330011", password: "1111", template: "lush" });
     await assert.rejects(createMoneyTreeInvoice(input("88330011"), "http://x"), status(409));
-    await assert.rejects(login("88330011", "4321"), status(401));
+    await assert.rejects(login("88330011", "4321"), status(401), "мөнгөтэй гацуур төлөгдөөгүй");
   });
 
   it("төлөгдөхөд банк, данстай мөнгөтэй гацуур үүсч, PIN-ээр нэвтэрнэ (давхар дуудлагад нэг л удаа)", async () => {
@@ -34,7 +35,8 @@ describe("мөнгөтэй гацуур", () => {
     assert.equal(tree?.bank, "khan");
     assert.equal(tree?.account, "5000123456");
     assert.equal(tree?.createFee, 15000);
-    assert.equal(await getTreeIdByPhone("88330022"), inv.treeId);
+    assert.equal(await getTreeIdByPhone("88330022", "money"), inv.treeId);
+    assert.equal(await getTreeIdByPhone("88330022"), null, "энгийн гацуур байхгүй");
     assert.equal((await login("88330022", "4321")).id, inv.treeId);
     const row = (await listTreesForAdmin()).find((r) => r.id === inv.treeId);
     assert.equal(row?.kind, "money");
@@ -64,12 +66,13 @@ describe("мөнгөтэй гацуур", () => {
     await assert.rejects(createInvoice({ kind: "gift", treeId: tree.id, ornament: "coin", from: "A", message: "" }, "http://x"), status(400));
   });
 
-  it("түгжээ дууссаны дараа өөр хүн дугаарыг авсан бол гацуур үүсч, алдаа логлогдоно", async () => {
+  it("түгжээ дууссаны дараа өөр хүн мөнгөтэй гацуурыг авсан бол гацуур үүсч, алдаа логлогдоно", async () => {
     const inv = await createMoneyTreeInvoice(input("88330055"), "http://x");
-    await getDB().del("phone:88330055"); // 15 минут өнгөрсөн
-    const other = await createTree({ name: "Өөр", phone: "88330055", password: "1111", template: "lush" });
+    await getDB().del("phone:money:88330055"); // 15 минут өнгөрсөн
+    const other = await createMoneyTreeInvoice({ ...input("88330055"), name: "Өөр" }, "http://x");
+    await finalizeInvoice(other);
     await finalizeInvoice(inv);
-    assert.equal(await getTreeIdByPhone("88330055"), other.id, "эхний эзний дугаарыг булаахгүй");
+    assert.equal(await getTreeIdByPhone("88330055", "money"), other.treeId, "эхний эзний дугаарыг булаахгүй");
     assert.equal((await getTree(inv.treeId))?.kind, "money");
   });
 });

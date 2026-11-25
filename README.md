@@ -4,7 +4,8 @@
 
 ## Боломжууд
 - Гацуурын нэр, утасны дугаар, 4 оронтой PIN-ээр гацуур үүсгэх (үнэгүй)
-- Утасны дугаар + PIN-ээр нэвтрэх
+- Утасны дугаар + PIN-ээр нэвтрэх. 1 утсанд 1 энгийн + 1 мөнгөтэй гацуур; хоёулаа байвал `/my`-д сонгоно
+- Админ `/admin/invoices`: QPay нэхэмжлэхийг invoice_id + утсаар хайж энгийн гацуурын бэлэг / мөнгөтэй гацуурын мөнгийг ялгана
 - PIN мартсан бол `/reset` — verify.mn SMS баталгаажуулалтаар шинэ PIN тохируулах
 - Админ: `/admin` — бүх гацуур, утас, бэлгийн тоо, нийт дүн
 - 4 үнэгүй загвар (Сэвсгэр, Цаасан, Гэрэлт, Цасан) — хүссэн үедээ солино
@@ -75,7 +76,8 @@ Callback-д шууд итгэхгүй, QPay-с дахин шалгаж бата�
 | Түлхүүр | Төрөл | Агуулга |
 |---|---|---|
 | `tree:<id>` | JSON | нэр, утас, bcrypt нууц үг, загвар |
-| `phone:<утас>` | string | гацуурын id (SET NX — давхардахгүй) |
+| `phone:<утас>` | string | энгийн гацуурын id (SET NX — давхардахгүй) |
+| `phone:money:<утас>` | string | мөнгөтэй гацуурын id (1 утас = 1 энгийн + 1 мөнгөтэй) |
 | `tree:<id>:gifts` | hash | invoice id → бэлэг |
 | `tree:<id>:expands` | hash | invoice id → нэмэгдсэн зай |
 | `tree:<id>:amount` | number | төлөгдсөн бэлгийн нийт дүн — invoice paid болоход invoice-ийн утсаар гацуурыг олж INCRBY |
@@ -86,7 +88,7 @@ Callback-д шууд итгэхгүй, QPay-с дахин шалгаж бата�
 | `reset:<rid>` | JSON (20 мин) | PIN сэргээх хүсэлт ↔ verify.mn sessionId |
 | `qpay:token` | string (TTL = expires_in) | QPay access_token |
 | `qpay:invoice:<invoice_id>` | JSON (90 хоног) | QPay нэхэмжлэх: invoice_id, qr_text, status, created_date, phone |
-| `qpay:phone:<утас>` | hash | invoice_id → QPay нэхэмжлэх |
+| `qpay:phone:<утас>` | hash | invoice_id → QPay нэхэмжлэх (`tree_kind`: free = энгийн гацуурын бэлэг, money = мөнгөтэй гацуурын мөнгө; `purpose`, `tree_id`) |
 | `logs` | list (сүүлийн 2000) | алдаа/үйл явдлын лог |
 
 Бэлэг, томруулалт нь **invoice id-р hash-д** бичигддэг тул callback болон polling давхар ирсэн ч нэг л удаа тооцогдоно.

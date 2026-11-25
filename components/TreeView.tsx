@@ -130,7 +130,10 @@ export default function TreeView({
       <div className="bar">
         <Link className="chip" href="/">🎄 Гацуур</Link>
         {isOwner ? (
-          <button className="chip" onClick={logout}>Гарах</button>
+          <span style={{ display: "flex", gap: 6 }}>
+            <Link className="chip" href="/my">Миний гацуурууд</Link>
+            <button className="chip" onClick={logout}>Гарах</button>
+          </span>
         ) : (
           <Link className="chip" href="/login">Би эзэн нь</Link>
         )}
@@ -213,6 +216,14 @@ export default function TreeView({
               <h4>🎨 Загвар солих</h4>
               <TemplatePicker money={!!money} value={shownTemplate} onChange={changeTemplate} />
             </div>
+
+            {!money && (
+              <div className="card">
+                <h4>💰 Мөнгөтэй гацуур</h4>
+                <p>Энэ дугаараараа мөнгөтэй гацуур нэмж үүсгээрэй — найзууд чинь мөнгөн чимэглэл өлгөж, мөнгө нь таны данс руу орно.</p>
+                <Link className="btn money" href="/money">💰 Мөнгөтэй гацуур үүсгэх · 15,000₮</Link>
+              </div>
+            )}
 
             {!full && (
               <div className="card">

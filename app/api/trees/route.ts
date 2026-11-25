@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { isTemplate } from "@/lib/config";
 import { clientIp, handle } from "@/lib/http";
-import { setSession } from "@/lib/session";
-import { AppError, clean, createTree, normalizePhone, rateLimit } from "@/lib/trees";
+import { addSessionTree } from "@/lib/session";
+import { AppError, clean, createTree, normalizePhone, rateLimit, treePhone } from "@/lib/trees";
 
 export async function POST(req: Request) {
   return handle(req, async () => {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     if (!/^\d{4}$/.test(pin)) throw new AppError(400, "PIN код 4 оронтой тоо байна.");
     await rateLimit(`create:${clientIp(req)}`, 10, 3600);
     const tree = await createTree({ name, phone, password: pin, template });
-    await setSession(tree.id);
+    await addSessionTree(tree.id, treePhone);
     return NextResponse.json({ id: tree.id });
   });
 }

@@ -202,6 +202,16 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .custom-amount .input { flex: 1; font-size: 18px; font-weight: 800; }
 .custom-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .custom-chips button { padding: 6px 10px; border-radius: 99px; background: #fff0c2; color: #8a5a00; font-size: 12px; font-weight: 800; }
+.tree-pick {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 20px; text-decoration: none; color: #fff;
+  background: linear-gradient(160deg, #a10d1aeb, #5a070cf2); border: 1px solid #ffd36b66; box-shadow: 0 10px 28px #3a050833;
+}
+.tree-pick.money { background: linear-gradient(160deg, #1f8a55f0, #0f5c36f5); }
+.tree-pick-ico { font-size: 30px; }
+.tree-pick-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tree-pick-body b { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-pick-body small { font-size: 12px; opacity: .85; font-weight: 700; }
+.tree-pick-go { font-size: 22px; font-weight: 900; color: #ffe7a0; }
 .hint-pill { align-self: center; text-align: center; margin: 0; padding: 8px 14px; border-radius: 14px; font-size: 12px; font-weight: 700; line-height: 1.45; color: #fff; background: #5a070cd9; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .share-row { display: flex; gap: 8px; align-items: center; }
 .share-url {
@@ -460,6 +470,14 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .admin .small { font-size: 12px; }
 .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 800; }
 .badge.paid { background: #1f8a5533; color: #6fe3a5; }
+.badge.money { background: #1f8a5533; color: #6fe3a5; }
+.badge.free { background: #c8102e33; color: #ff9aa8; }
+.qpay-find { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.qpay-find input { flex: 1 1 160px; min-width: 0; font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid #2c3046; background: #1d2030; color: #fff; }
+.qpay-find button { padding: 10px 16px; border-radius: 12px; background: #1f8a55; color: #fff; font-weight: 800; }
+.qpay-result { background: #1d2030; border: 1px solid #2c3046; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+.qpay-result dt { opacity: .6; }
+.qpay-result dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
 .badge.pending { background: #ffd36b26; color: #ffd36b; }
 .live { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 0 0 10px; }
 .live i { width: 8px; height: 8px; border-radius: 50%; background: #6fe3a5; }
