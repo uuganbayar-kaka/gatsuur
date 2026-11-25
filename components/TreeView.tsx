@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CUSTOM_MAX, CUSTOM_MIN, EXPAND_PLANS, FREE_CAPACITY, GIFT_OPEN_DATE, MONEY_ORNAMENTS, ORNAMENTS, PREMIUM_PRICE, TOPPER_ID, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
+import { CUSTOM_MAX, CUSTOM_MIN, EXPAND_PLANS, MONEY_TEMPLATES, isMoneyTemplate, FREE_CAPACITY, GIFT_OPEN_DATE, MONEY_ORNAMENTS, ORNAMENTS, PREMIUM_PRICE, TOPPER_ID, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
 import { OrnamentIcon } from "./Ornament";
 import PaySheet, { type PublicInvoice } from "./PaySheet";
 import Papercut from "./Papercut";
@@ -10,6 +10,7 @@ import OpenNotice from "./OpenNotice";
 import Snow from "./Snow";
 import StoryButton from "./StoryImage";
 import TemplatePicker from "./TemplatePicker";
+import TreeMusic from "./TreeMusic";
 import TreeArt from "./TreeArt";
 
 type G = { id: string; ornament: OrnamentId; from: string; message?: string };
@@ -52,6 +53,9 @@ export default function TreeView({
   const hung = gifts.filter((g) => g.id !== topperId).length;
   const full = hung >= capacity;
   const stageRef = useRef<HTMLDivElement>(null);
+  // Мөнгөтэй гацуур үнэгүй загвартай (өмнө үүссэн) бол "Алтан" загвараар харуулна
+  const shownTemplate: TemplateId = money && !isMoneyTemplate(template) ? "gold" : template;
+  const moneyTpl = money ? MONEY_TEMPLATES.find((t) => t.id === shownTemplate) : undefined;
 
   // Том гацуур хажуу тийш гүйлгэгдэх үед голоос нь эхэлнэ
   useEffect(() => {
@@ -138,14 +142,19 @@ export default function TreeView({
         <div className="count">
           🎁 <b>{hung}</b> / {capacity} бэлэг чимэглэл өлгөгдсөн
         </div>
-        {money && <div className="money-badge">💰 Мөнгөтэй гацуур</div>}
+        {money && (
+          <div className="money-row">
+            <span className="money-badge">💰 Мөнгөтэй гацуур</span>
+            {moneyTpl && <TreeMusic melody={moneyTpl.melody} song={moneyTpl.song} />}
+          </div>
+        )}
         <OpenNotice owner={isOwner} />
       </header>
 
       <div className="stage" ref={stageRef}>
         <TreeArt
           zoom
-          template={template}
+          template={shownTemplate}
           capacity={capacity}
           gifts={gifts}
           topperId={topperId}
@@ -200,7 +209,7 @@ export default function TreeView({
 
             <div className="card">
               <h4>🎨 Загвар солих</h4>
-              <TemplatePicker value={template} onChange={changeTemplate} />
+              <TemplatePicker money={!!money} value={shownTemplate} onChange={changeTemplate} />
             </div>
 
             {!full && (

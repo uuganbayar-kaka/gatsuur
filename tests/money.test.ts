@@ -73,3 +73,18 @@ describe("мөнгөтэй гацуур", () => {
     assert.equal((await getTree(inv.treeId))?.kind, "money");
   });
 });
+
+describe("мөнгөтэй гацуурын загвар", async () => {
+  const { templateFits, MONEY_TEMPLATES } = await import("../lib/config");
+  const { MELODIES } = await import("../lib/melodies");
+  it("мөнгөтэй гацуурт зөвхөн 4 мөнгөтэй загвар, энгийнд зөвхөн үнэгүй загвар", () => {
+    assert.equal(MONEY_TEMPLATES.length, 4);
+    for (const t of MONEY_TEMPLATES) {
+      assert.ok(templateFits("money", t.id));
+      assert.ok(!templateFits("free", t.id));
+      assert.ok(MELODIES[t.melody].notes.length > 10, `${t.id} аялгуутай`);
+    }
+    assert.ok(!templateFits("money", "lush"));
+    assert.ok(templateFits(undefined, "lush"));
+  });
+});

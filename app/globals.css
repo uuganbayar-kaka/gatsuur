@@ -114,12 +114,24 @@ svg .a-bounce { transform-box: fill-box; transform-origin: 50% 100%; animation: 
 svg .rays-slow { transform-box: fill-box; transform-origin: 50% 50%; animation: spin 16s linear infinite; }
 .tree-art .sparkle-ring { transform-box: fill-box; transform-origin: 50% 50%; animation: spin 22s linear infinite reverse; }
 @keyframes topperIn { from { transform: translateY(-80px) rotate(-180deg) scale(.3); opacity: 0; } 60% { opacity: 1; } }
+/* Мөнгөтэй гацуур: гэрлийн утас, оч, гэрэлтэх од */
+.tree-art .bulb { animation: bulbBlink 1.8s ease-in-out infinite; }
+.tree-art .bulb .bulb-glow { transform-box: fill-box; transform-origin: 50% 50%; animation: bulbGlow 1.8s ease-in-out infinite; animation-delay: inherit; }
+.tree-art .bulb.cycle { animation: bulbBlink 1.8s ease-in-out infinite, bulbCycle 6s linear infinite; }
+.tree-art .spark { transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; animation: spark 3s ease-in-out infinite; }
+.tree-art .star-pulse { transform-box: fill-box; transform-origin: 50% 50%; animation: starPulse 2.2s ease-in-out infinite; }
+@keyframes bulbBlink { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+@keyframes bulbGlow { 0%, 100% { transform: scale(1.1); opacity: .5; } 50% { transform: scale(.7); opacity: .18; } }
+@keyframes bulbCycle { 0% { color: #7FE3C4; } 25% { color: #9FC2FF; } 50% { color: #FF7A8A; } 75% { color: #FFD36B; } 100% { color: #7FE3C4; } }
+@keyframes spark { 0%, 70%, 100% { opacity: 0; transform: scale(.2) rotate(0); } 82% { opacity: 1; transform: scale(1) rotate(45deg); } }
+@keyframes starPulse { 0%, 100% { transform: scale(.8); opacity: .55; } 50% { transform: scale(1.15); opacity: 1; } }
 @keyframes drop { from { transform: translateY(-40px); opacity: 0; } 40% { opacity: 1; } }
 @keyframes glint { 0%, 82%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 90% { opacity: 1; transform: scale(1.2) rotate(45deg); } }
 @keyframes slotPulse { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) {
   .tree-art .drop, .tree-art .swing, .tree-art .glint, .tree-art .slot, .tree-art .twinkle, .tree-art .halo, svg .rays,
-  svg [class^="a-"], .tree-art .aura, .tree-art .ripple, .tree-art .orbit, .tree-art .topper, svg .rays-slow, .tree-art .sparkle-ring { animation: none !important; }
+  svg [class^="a-"], .tree-art .aura, .tree-art .ripple, .tree-art .orbit, .tree-art .topper, svg .rays-slow, .tree-art .sparkle-ring,
+  .tree-art .bulb, .tree-art .bulb-glow, .tree-art .spark, .tree-art .star-pulse { animation: none !important; }
 }
 .tree-art .halo, svg .halo { transform-box: fill-box; transform-origin: 50%; animation: halo 2.4s ease-in-out infinite; }
 svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s linear infinite; }
@@ -174,6 +186,17 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .bank-opt.sel { background: #ffd36b; color: #3a2a10; border-color: #ffd36b; }
 .bank-grid .bank-opt:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .money-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 900; color: #3a2a10; background: linear-gradient(90deg, #ffe08a, #f2b630); }
+.money-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: 8px; }
+.money-row .money-badge { margin-top: 0; }
+.music-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 8px; border-radius: 99px; max-width: 70vw;
+  color: #fff; font-size: 12px; font-weight: 800; background: #5a070ce6; border: 1px solid #ffd36b80;
+  box-shadow: 0 8px 20px #0000004d; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.music-btn .music-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-btn .music-ico { font-size: 16px; }
+.music-btn.on .music-ico { animation: musicBeat 1s ease-in-out infinite; }
+@keyframes musicBeat { 50% { transform: scale(1.2); } }
 .money-total { font-size: 30px; font-weight: 900; color: #ffe7a0; font-variant-numeric: tabular-nums; }
 .custom-amount { display: flex; align-items: center; gap: 8px; }
 .custom-amount .input { flex: 1; font-size: 18px; font-weight: 800; }

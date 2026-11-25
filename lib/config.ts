@@ -92,7 +92,7 @@ export const planById = (id: PlanId | undefined) => EXPAND_PLANS.find((p) => p.i
 export const planPriceBySlots = (slots: number) =>
   [...EXPAND_PLANS, ...LEGACY_PLANS].find((p) => p.slots === slots)?.price ?? 0;
 
-export type TemplateId = "lush" | "paper" | "lights" | "snowy";
+export type TemplateId = "lush" | "paper" | "lights" | "snowy" | "gold" | "royal" | "aurora" | "crystal";
 
 export const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
   { id: "lush", name: "Сэвсгэр", desc: "Цас, гэрэл" },
@@ -103,5 +103,20 @@ export const TEMPLATES: { id: TemplateId; name: string; desc: string }[] = [
 
 export const isTemplate = (v: unknown): v is TemplateId =>
   TEMPLATES.some((t) => t.id === v);
+
+export type MelodyId = "jingle" | "wish" | "deck" | "silent";
+
+/** Мөнгөтэй гацуурын загварууд — гэрэлт чимэглэл, гэрэлтэх од, тус бүр өөрийн хөгжимтэй. */
+export const MONEY_TEMPLATES: { id: TemplateId; name: string; desc: string; melody: MelodyId; song: string }[] = [
+  { id: "gold", name: "Алтан", desc: "Jingle Bells", melody: "jingle", song: "Jingle Bells" },
+  { id: "royal", name: "Хаант", desc: "We Wish You…", melody: "wish", song: "We Wish You a Merry Christmas" },
+  { id: "aurora", name: "Туйлын гэрэл", desc: "Deck the Halls", melody: "deck", song: "Deck the Halls" },
+  { id: "crystal", name: "Болор", desc: "Silent Night", melody: "silent", song: "Silent Night" },
+];
+
+export const isMoneyTemplate = (v: unknown): v is TemplateId => MONEY_TEMPLATES.some((t) => t.id === v);
+/** Гацуурын төрөлд тохирох загвар мөн эсэх. */
+export const templateFits = (kind: "free" | "money" | undefined, v: unknown): v is TemplateId =>
+  kind === "money" ? isMoneyTemplate(v) : isTemplate(v);
 
 export const formatMnt = (n: number) => n.toLocaleString("en-US") + "₮";

@@ -10,7 +10,7 @@ const onlyDigits = (v: string, n: number) => v.replace(/\D/g, "").slice(0, n);
 
 export default function MoneyCreateForm() {
   const router = useRouter();
-  const [template, setTemplate] = useState<TemplateId>("lush");
+  const [template, setTemplate] = useState<TemplateId>("gold");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
@@ -61,9 +61,11 @@ export default function MoneyCreateForm() {
         <p>Зочид 1,000₮ – 20,000₮ эсвэл хүссэн дүнгээрээ мөнгөн чимэглэл өлгөнө. Цугласан мөнгийг таны бүртгүүлсэн данс руу шилжүүлнэ.</p>
       </div>
 
-      <div className="form-label">Гацуураа сонго</div>
+      <div className="form-label">
+        Гацуураа сонго <small>(гэрэлт чимэглэл, хөгжимтэй)</small>
+      </div>
       <div style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}>
-        <TemplatePicker value={template} onChange={setTemplate} />
+        <TemplatePicker money value={template} onChange={setTemplate} />
       </div>
 
       <form className="form" onSubmit={submit}>

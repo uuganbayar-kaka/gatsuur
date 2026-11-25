@@ -11,6 +11,8 @@ type Theme = {
   paper?: boolean;
   lights?: boolean;
   trunk: string;
+  /** Мөнгөтэй гацуурын загвар: гэрлийн утас (өнгөнүүд), гялалзах оч, гэрэлтэх од */
+  festive?: { bulbs: string[]; wire: string; glow: string; cycle?: boolean };
 };
 
 const THEMES: Record<TemplateId, Theme> = {
@@ -18,6 +20,10 @@ const THEMES: Record<TemplateId, Theme> = {
   paper: { top: "#8CC79A", bottom: "#5E9C70", snow: 0, paper: true, trunk: "#A0714A" },
   lights: { top: "#2A5E48", bottom: "#123526", snow: 0.25, lights: true, trunk: "#4A2F1C" },
   snowy: { top: "#3D8F7E", bottom: "#17665A", snow: 0.95, trunk: "#5A3A24" },
+  gold: { top: "#2F8A57", bottom: "#134A2C", snow: 0.3, trunk: "#5A3A24", festive: { bulbs: ["#FFD36B", "#FFE9A8", "#FFB547"], wire: "#3a2a10", glow: "#FFD98A" } },
+  royal: { top: "#1E7A63", bottom: "#0A3A30", snow: 0.2, trunk: "#4A2F1C", festive: { bulbs: ["#C59BFF", "#FFD36B", "#FF7AD9", "#9FC2FF"], wire: "#1b1030", glow: "#E0B8FF" } },
+  aurora: { top: "#1F8A7A", bottom: "#0B4A52", snow: 0.4, trunk: "#4A2F1C", festive: { bulbs: ["#7FE3C4", "#9FC2FF", "#FF7A8A", "#FFD36B", "#C59BFF"], wire: "#06262a", glow: "#8FF5DA", cycle: true } },
+  crystal: { top: "#4FA3B8", bottom: "#1F5C73", snow: 0.95, trunk: "#4F3A2A", festive: { bulbs: ["#FFFFFF", "#BFE6FF", "#8FD3FF"], wire: "#16384a", glow: "#CFF3FF" } },
 };
 
 const TOP = 70;
@@ -202,6 +208,13 @@ export default function TreeArt({
           <stop offset="0" stopColor={th.top} />
           <stop offset="1" stopColor={th.bottom} />
         </linearGradient>
+        {th.festive && (
+          <radialGradient id={`sg-${template}`}>
+            <stop offset="0" stopColor={th.festive.glow} stopOpacity=".75" />
+            <stop offset=".45" stopColor={th.festive.glow} stopOpacity=".25" />
+            <stop offset="1" stopColor={th.festive.glow} stopOpacity="0" />
+          </radialGradient>
+        )}
         <radialGradient id="tree-glow">
           <stop offset="0" stopColor="#FFD98A" stopOpacity=".35" />
           <stop offset="1" stopColor="#FFD98A" stopOpacity="0" />
@@ -268,7 +281,61 @@ export default function TreeArt({
         );
       })}
 
-      {!th.lights &&
+      {th.festive &&
+        tiers.map((t, r) => {
+          // Мөчир бүрт унжсан гэрлийн утас: муруй дагуу чийдэнгүүд ээлжлэн анивчина
+          const fx = th.festive!;
+          const top = r ? tiers[r - 1].yB + 2 : t.yA + (t.yB - t.yA) * 0.45;
+          const y1 = top + 3;
+          const y2 = t.yB - 7;
+          const x1 = cx - halfAt(t, y1) + 4;
+          const x2 = cx + halfAt(t, y2) - 4;
+          const [ax, ay, bx, by] = r % 2 ? [x2, y1, x1, y2] : [x1, y1, x2, y2];
+          const qx = cx;
+          const qy = (ay + by) / 2 + 18;
+          const n = Math.max(5, Math.round(Math.abs(bx - ax) / 18));
+          return (
+            <g key={`fl${r}`}>
+              <path d={`M${ax} ${ay} Q${qx} ${qy} ${bx} ${by}`} stroke={fx.wire} strokeWidth="1" fill="none" opacity=".7" />
+              {Array.from({ length: n + 1 }, (_, i) => {
+                const u = i / n;
+                const x = (1 - u) ** 2 * ax + 2 * (1 - u) * u * qx + u * u * bx;
+                const y = (1 - u) ** 2 * ay + 2 * (1 - u) * u * qy + u * u * by;
+                const c = fx.bulbs[(i + r) % fx.bulbs.length];
+                const delay = `${((i * 0.23 + r * 0.41) % 1.8).toFixed(2)}s`;
+                return (
+                  <g key={i} transform={`translate(${x} ${y + 3})`} className={fx.cycle ? "bulb cycle" : "bulb"} style={{ animationDelay: delay, color: c }}>
+                    <circle r="8" fill="currentColor" opacity=".35" className="bulb-glow" />
+                    <rect x="-1.4" y="-4.6" width="2.8" height="2.2" rx=".6" fill="#3a3a3a" />
+                    <ellipse ry="3.4" rx="2.5" fill="currentColor" />
+                    <ellipse cx="-.8" cy="-1" rx=".7" ry="1.1" fill="#fff" opacity=".7" />
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })}
+
+      {th.festive &&
+        // Мөчир дээгүүр гялалзах оч
+        Array.from({ length: Math.min(28, 6 + tiers.length * 4) }, (_, i) => {
+          const t = tiers[i % tiers.length];
+          const u = ((i * 0.618034) % 1) * 2 - 1;
+          const y = t.yA + (t.yB - t.yA) * (0.45 + ((i * 0.37) % 1) * 0.45);
+          const x = cx + u * Math.max(0, halfAt(t, y) - 8);
+          return (
+            <path
+              key={`sp${i}`}
+              className="spark"
+              style={{ animationDelay: `${((i * 0.53) % 3).toFixed(2)}s` }}
+              transform={`translate(${x} ${y}) scale(${0.6 + ((i * 0.29) % 1) * 0.6})`}
+              d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1Z"
+              fill="#fff"
+            />
+          );
+        })}
+
+      {!th.lights && !th.festive &&
         tiers.map((t, r) => (
           <path
             key={`gl${r}`}
@@ -296,6 +363,20 @@ export default function TreeArt({
             <g transform="scale(1.55)">
               <OrnamentShape id="topper" />
             </g>
+          </g>
+        </g>
+      ) : th.festive ? (
+        // Мөнгөтэй гацуурын гэрэлтэж анивчих оройн од
+        <g transform={`translate(${cx} ${TOP - 12})`}>
+          <circle r="56" fill={`url(#sg-${template})`} className="star-pulse" />
+          <circle r="30" fill="url(#o-aura)" className="halo" />
+          <g className="sparkle-ring">
+            {Array.from({ length: 6 }, (_, i) => (
+              <circle key={i} r={i % 2 ? 1.3 : 2} cx={Math.cos((i * Math.PI) / 3) * 30} cy={Math.sin((i * Math.PI) / 3) * 30} fill="#FFF3C4" className="twinkle" style={{ animationDelay: `${i * 0.35}s` }} />
+            ))}
+          </g>
+          <g transform="scale(1.3)">
+            <OrnamentShape id="topper" />
           </g>
         </g>
       ) : (

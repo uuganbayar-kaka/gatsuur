@@ -1,5 +1,5 @@
 "use client";
-import { TEMPLATES, type TemplateId } from "@/lib/config";
+import { MONEY_TEMPLATES, TEMPLATES, type TemplateId } from "@/lib/config";
 import TreeArt from "./TreeArt";
 
 const DEMO = [
@@ -8,13 +8,19 @@ const DEMO = [
   { id: "d3", ornament: "star" as const, from: "" },
 ];
 
-export default function TemplatePicker({ value, onChange }: { value: TemplateId; onChange: (t: TemplateId) => void }) {
+const DEMO_MONEY = [
+  { id: "d1", ornament: "coin" as const, from: "" },
+  { id: "d2", ornament: "envelope" as const, from: "" },
+  { id: "d3", ornament: "moneybag" as const, from: "" },
+];
+
+export default function TemplatePicker({ value, onChange, money = false }: { value: TemplateId; onChange: (t: TemplateId) => void; money?: boolean }) {
   return (
     <div className="tpl-row">
-      {TEMPLATES.map((t) => (
+      {(money ? MONEY_TEMPLATES : TEMPLATES).map((t) => (
         <button key={t.id} type="button" className={`tpl${value === t.id ? " sel" : ""}`} onClick={() => onChange(t.id)}>
           <span className="mini">
-            <TreeArt template={t.id} capacity={8} gifts={DEMO} showEmpty={false} />
+            <TreeArt template={t.id} capacity={8} gifts={money ? DEMO_MONEY : DEMO} showEmpty={false} />
           </span>
           {t.name}
           <small>{t.desc}</small>

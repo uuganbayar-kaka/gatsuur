@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isBank, isTemplate, normalizeAccount } from "@/lib/config";
+import { isBank, isMoneyTemplate, normalizeAccount } from "@/lib/config";
 import { baseUrl, clientIp, handle } from "@/lib/http";
 import { getPendingCreate, setPendingCreate } from "@/lib/session";
 import { AppError, clean, createMoneyTreeInvoice, getInvoice, normalizePhone, publicInvoice, rateLimit } from "@/lib/trees";
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const name = clean(body.name, 40);
     const phone = normalizePhone(body.phone);
     const pin = typeof body.pin === "string" ? body.pin : "";
-    const template = isTemplate(body.template) ? body.template : "lush";
+    const template = isMoneyTemplate(body.template) ? body.template : "gold";
     const account = normalizeAccount(body.account);
     if (!name) throw new AppError(400, "Гацуурын нэрээ оруулна уу.");
     if (!phone) throw new AppError(400, "Утасны дугаар 8 оронтой байх ёстой.");
