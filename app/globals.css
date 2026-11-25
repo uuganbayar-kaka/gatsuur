@@ -277,7 +277,12 @@ svg .rays { transform-box: fill-box; transform-origin: 50%; animation: spin 12s 
 .qr { width: 220px; height: 220px; margin: 10px auto; display: block; border-radius: 12px; background: #fff; border: 2px solid var(--line); }
 .banks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
 .bank { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; text-decoration: none; color: var(--ink); }
-.bank img { width: 44px; height: 44px; border-radius: 12px; }
+.bank { padding: 6px 2px; border-radius: 12px; border: 1.5px solid transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; line-height: 1.2; word-break: break-word; }
+.bank:active { transform: scale(.96); }
+.bank.sel { border-color: var(--gold); background: #ffd36b22; }
+.bank img { width: 44px; height: 44px; border-radius: 12px; pointer-events: none; }
+.bank span { pointer-events: none; }
+.bank-link { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 800; color: var(--ink); text-decoration: underline; }
 .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--muted); margin-top: 8px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: twinkle 1.2s infinite; }
 .mock-banner { background: #fff3cd; color: #7a5410; border-radius: 12px; padding: 10px; font-size: 12px; font-weight: 700; margin-top: 10px; }

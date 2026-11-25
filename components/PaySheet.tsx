@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatMnt } from "@/lib/config";
 
 export type PublicInvoice = {
@@ -27,7 +27,18 @@ export default function PaySheet({
   const [inv, setInv] = useState(invoice);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [opened, setOpened] = useState<string | null>(null);
   const paid = inv.status === "paid";
+  const polling = useRef(false);
+
+  /** Нэхэмжлэхийн төлөвийг чимээгүй шалгана (давхар хүсэлт явуулахгүй). */
+  const poll = useCallback(async () => {
+    if (polling.current) return;
+    polling.current = true;
+    const r = await fetch(`/api/invoices/${inv.id}`, { cache: "no-store" }).catch(() => null);
+    polling.current = false;
+    if (r?.ok) setInv(await r.json());
+  }, [inv.id]);
 
   useEffect(() => {
     if (paid) {
@@ -35,13 +46,30 @@ export default function PaySheet({
       return;
     }
     if (inv.mock) return;
-    const t = setInterval(async () => {
-      const r = await fetch(`/api/invoices/${inv.id}`, { cache: "no-store" }).catch(() => null);
-      if (r?.ok) setInv(await r.json());
-    }, 3000);
-    return () => clearInterval(t);
+    const t = setInterval(poll, 3000);
+    // Банкны аппаас буцаж ирэхэд шууд шалгана (далд таб дээр interval удааширдаг).
+    const onBack = () => {
+      if (document.visibilityState === "visible") poll();
+    };
+    document.addEventListener("visibilitychange", onBack);
+    window.addEventListener("focus", onBack);
+    window.addEventListener("pageshow", onBack);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onBack);
+      window.removeEventListener("focus", onBack);
+      window.removeEventListener("pageshow", onBack);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paid, inv.id, inv.mock]);
+  }, [paid, inv.mock, poll]);
+
+  /** Банкны аппыг deep link-ээр нээнэ. */
+  function openApp(e: React.MouseEvent<HTMLAnchorElement>, link: string, name: string) {
+    e.preventDefault();
+    setErr("");
+    setOpened(name);
+    window.location.href = link;
+  }
 
   async function check(path: string, method: "GET" | "POST") {
     setBusy(true);
@@ -85,19 +113,34 @@ export default function PaySheet({
           {inv.urls.length > 0 && (
             <div className="banks">
               {inv.urls.map((u) => (
-                <a key={u.name + u.link} className="bank" href={u.link}>
+                <a
+                  key={u.name + u.link}
+                  className={`bank${opened === u.name ? " sel" : ""}`}
+                  href={u.link}
+                  rel="noopener"
+                  onClick={(e) => openApp(e, u.link, u.name)}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={u.logo} alt="" />
-                  {u.description}
+                  <img src={u.logo} alt={u.description || u.name} loading="lazy" />
+                  <span>{u.description || u.name}</span>
                 </a>
               ))}
             </div>
           )}
+          {inv.shortUrl && (
+            <a className="bank-link" href={inv.shortUrl} target="_blank" rel="noopener noreferrer">
+              QPay холбоосоор төлөх ↗
+            </a>
+          )}
           <div className="status">
-            <span className="dot" /> Төлбөр хүлээж байна…
+            <span className="dot" /> {opened ? "Аппаас төлөөд энд буцаж ирнэ үү…" : "Төлбөр хүлээж байна…"}
           </div>
-          <button className="btn secondary" disabled={busy} onClick={() => check(`/api/invoices/${inv.id}`, "GET")}>
-            Төлбөр шалгах
+          <button
+            className={`btn ${opened ? "primary" : "secondary"}`}
+            disabled={busy}
+            onClick={() => check(`/api/invoices/${inv.id}`, "GET")}
+          >
+            {busy ? "Шалгаж байна…" : opened ? "Төлсөн, шалгах" : "Төлбөр шалгах"}
           </button>
         </>
       )}
