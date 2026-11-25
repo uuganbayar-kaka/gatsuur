@@ -3,6 +3,7 @@ import AdminLogout from "./AdminLogout";
 
 const LINKS = [
   { href: "/admin", label: "Гацуур" },
+  { href: "/admin/money", label: "💰 Мөнгөтэй" },
   { href: "/admin/invoices", label: "Нэхэмжлэх" },
   { href: "/admin/logs", label: "Лог" },
 ];

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { EXPAND_PLANS, FREE_CAPACITY, GIFT_OPEN_DATE, ORNAMENTS, PREMIUM_PRICE, TOPPER_ID, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
+import { CUSTOM_MAX, CUSTOM_MIN, EXPAND_PLANS, FREE_CAPACITY, GIFT_OPEN_DATE, MONEY_ORNAMENTS, ORNAMENTS, PREMIUM_PRICE, TOPPER_ID, formatMnt, type OrnamentId, type PlanId, type TemplateId } from "@/lib/config";
 import { OrnamentIcon } from "./Ornament";
 import PaySheet, { type PublicInvoice } from "./PaySheet";
 import Papercut from "./Papercut";
@@ -26,6 +26,7 @@ export default function TreeView({
   gifts,
   isOwner,
   opened,
+  money,
   mock,
 }: {
   tree: { id: string; name: string; template: TemplateId };
@@ -34,6 +35,8 @@ export default function TreeView({
   gifts: G[];
   isOwner: boolean;
   opened: boolean;
+  /** Мөнгөтэй гацуур бол: эзэнд цугласан дүн, шилжүүлэх данс (бусдад undefined) */
+  money: { received?: number; payout?: string } | null;
   mock: boolean;
 }) {
   const router = useRouter();
@@ -135,6 +138,7 @@ export default function TreeView({
         <div className="count">
           🎁 <b>{hung}</b> / {capacity} бэлэг чимэглэл өлгөгдсөн
         </div>
+        {money && <div className="money-badge">💰 Мөнгөтэй гацуур</div>}
         <OpenNotice owner={isOwner} />
       </header>
 
@@ -159,12 +163,14 @@ export default function TreeView({
                 : `${tree.name}-ийн гацуурт сул зай үлдээгүй байна. Эзэн нь томруулсны дараа өлгөх боломжтой.`}
             </span>
             {isOwner && <button className="btn gold" onClick={() => setSheet({ t: "expand" })}>Гацуураа томруулах</button>}
-            {!topperId && (
+            {!topperId && !money && (
               <button className="btn festive" onClick={() => setSheet({ t: "gift" })}>👑 Оройн онцгой чимэглэл өлгөх</button>
             )}
           </div>
         ) : (
-          <button className="btn primary" onClick={() => setSheet({ t: "gift" })}>🎁 Бэлэг чимэглэл өлгөх</button>
+          <button className="btn primary" onClick={() => setSheet({ t: "gift" })}>
+            {money ? "💰 Мөнгөн чимэглэл өлгөх" : "🎁 Бэлэг чимэглэл өлгөх"}
+          </button>
         )}
 
         <StoryButton
@@ -176,6 +182,13 @@ export default function TreeView({
 
         {isOwner && (
           <>
+            {money && (
+              <div className="card">
+                <h4>💰 Цугласан мөнгө</h4>
+                <div className="money-total">{formatMnt(money.received ?? 0)}</div>
+                <p>Шилжүүлэх данс: <b>{money.payout}</b></p>
+              </div>
+            )}
             <div className="card">
               <h4>🔗 Хуваалцах линк</h4>
               <p>Энэ линкийг найзууддаа илгээгээрэй. Тэд гацуурт чинь бэлэг чимэглэл өлгөнө.</p>
@@ -254,7 +267,7 @@ export default function TreeView({
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-head">
               <h3>
-                {sheet.t === "gift" ? "🎁 Бэлэг чимэглэл өлгөх" : sheet.t === "expand" ? "🌲 Гацуураа томруулах" : "💳 Төлбөр төлөх"}
+                {sheet.t === "gift" ? (money ? "💰 Мөнгөн чимэглэл өлгөх" : "🎁 Бэлэг чимэглэл өлгөх") : sheet.t === "expand" ? "🌲 Гацуураа томруулах" : "💳 Төлбөр төлөх"}
               </h3>
               <button className="x" onClick={() => setSheet(null)} aria-label="Хаах">×</button>
             </div>
@@ -264,6 +277,7 @@ export default function TreeView({
                 treeName={tree.name}
                 full={full}
                 topperTaken={!!topperId}
+                money={!!money}
                 onInvoice={(invoice, title) => setSheet({ t: "pay", invoice, title })}
               />
             )}
@@ -301,29 +315,39 @@ function GiftForm({
   treeName,
   full,
   topperTaken,
+  money,
   onInvoice,
 }: {
   treeId: string;
   treeName: string;
   full: boolean;
   topperTaken: boolean;
+  money: boolean;
   onInvoice: (inv: PublicInvoice, title: string) => void;
 }) {
   // Гацуур дүүрсэн ч оройн чимэглэл (багтаамжид тооцогдохгүй) сул байж болно
-  const options = ORNAMENTS.filter((o) => (full ? o.id === TOPPER_ID : true));
-  const [orn, setOrn] = useState<OrnamentId>(full ? TOPPER_ID : "ball");
+  const options = money ? MONEY_ORNAMENTS : ORNAMENTS.filter((o) => (full ? o.id === TOPPER_ID : true));
+  const [orn, setOrn] = useState<OrnamentId>(money ? "envelope" : full ? TOPPER_ID : "ball");
+  const [custom, setCustom] = useState("");
   const [from, setFrom] = useState("");
   const [message, setMessage] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const selected = ORNAMENTS.find((o) => o.id === orn)!;
+  const selected = options.find((o) => o.id === orn)!;
   const tiers = [...new Set(options.map((o) => o.price))];
+  const isCustom = orn === "custom";
+  const customAmount = Number(custom) || 0;
+  const price = isCustom ? customAmount : selected.price;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setErr("");
-    const { inv, error } = await postInvoice({ kind: "gift", treeId, ornament: orn, from, message });
+    if (isCustom && (customAmount < CUSTOM_MIN || customAmount > CUSTOM_MAX)) {
+      setBusy(false);
+      return setErr(`Дүн ${formatMnt(CUSTOM_MIN)} – ${formatMnt(CUSTOM_MAX)} хооронд байна.`);
+    }
+    const { inv, error } = await postInvoice({ kind: "gift", treeId, ornament: orn, from, message, amount: isCustom ? customAmount : undefined });
     setBusy(false);
     if (error) return setErr(error);
     onInvoice(inv!, `${treeName}-д: ${selected.name}`);
@@ -334,9 +358,9 @@ function GiftForm({
       {tiers.map((price) => (
         <div key={price}>
           <div className="tier-label">
-            {formatMnt(price)}
-            {price === PREMIUM_PRICE && <span className="tier-tag">✨ Онцгой Анимейшнтэй</span>}
-            {price > PREMIUM_PRICE && <span className="tier-tag gold">👑 Гацуурт ганцхан · оройд байрлана</span>}
+            {price ? formatMnt(price) : "Хүссэн дүн"}
+            {!money && price === PREMIUM_PRICE && <span className="tier-tag">✨ Онцгой Анимейшнтэй</span>}
+            {!money && price > PREMIUM_PRICE && <span className="tier-tag gold">👑 Гацуурт ганцхан · оройд байрлана</span>}
           </div>
           <div className="orn-grid">
             {options.filter((o) => o.price === price).map((o) => {
@@ -351,13 +375,27 @@ function GiftForm({
                 >
                   <OrnamentIcon id={o.id} size={o.id === TOPPER_ID ? 64 : 46} />
                   {o.name}
-                  <b>{sold ? "Аль хэдийн өлгөгдсөн" : formatMnt(o.price)}</b>
+                  <b>{sold ? "Аль хэдийн өлгөгдсөн" : o.price ? formatMnt(o.price) : "Дүнгээ оруулна"}</b>
                 </button>
               );
             })}
           </div>
         </div>
       ))}
+      {isCustom && (
+        <label className="field">
+          Хүссэн дүн <small>({formatMnt(CUSTOM_MIN)} – {formatMnt(CUSTOM_MAX)})</small>
+          <div className="custom-amount">
+            <input className="input" value={custom} onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 7))} inputMode="numeric" placeholder="Дүнгээ оруулна уу" autoFocus />
+            <b>₮</b>
+          </div>
+          <div className="custom-chips">
+            {[30000, 50000, 100000, 200000].map((a) => (
+              <button type="button" key={a} onClick={() => setCustom(String(a))}>{formatMnt(a)}</button>
+            ))}
+          </div>
+        </label>
+      )}
       <label className="field">
         Таны нэр
         <input className="input" value={from} onChange={(e) => setFrom(e.target.value)} maxLength={40} placeholder="Хэнээс" required />
@@ -369,7 +407,7 @@ function GiftForm({
       <OpenNotice compact />
       {err && <div className="err">{err}</div>}
       <button className="btn primary" disabled={busy}>
-        {busy ? "Түр хүлээнэ үү…" : `Төлөх · ${formatMnt(selected.price)}`}
+        {busy ? "Түр хүлээнэ үү…" : `Төлөх · ${formatMnt(price)}`}
       </button>
     </form>
   );

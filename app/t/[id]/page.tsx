@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import TreeView from "@/components/TreeView";
-import { GIFT_OPEN_AT } from "@/lib/config";
+import { GIFT_OPEN_AT, bankName } from "@/lib/config";
 import { paymentMode } from "@/lib/qpay";
 import { getSessionTreeId } from "@/lib/session";
-import { getTreeView } from "@/lib/trees";
+import { getTreeAmounts, getTreeView } from "@/lib/trees";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,13 @@ export default async function TreePage({ params }: { params: Promise<{ id: strin
   const isOwner = me === id;
   // Захидал 2027-01-01 хүртэл битүү — эзэнд ч сервер мессежийг илгээхгүй
   const opened = Date.now() >= GIFT_OPEN_AT;
+  // Мөнгөтэй гацуур: цугласан дүн, данс зөвхөн эзэнд (дансны сүүлийн 4 орон)
+  const isMoney = v.tree.kind === "money";
+  const money = isMoney
+    ? isOwner
+      ? { received: (await getTreeAmounts(id)).amount, payout: `${bankName(v.tree.bank)} ••••${(v.tree.account ?? "").slice(-4)}` }
+      : {}
+    : null;
   return (
     <TreeView
       tree={{ id: v.tree.id, name: v.tree.name, template: v.tree.template }}
@@ -38,6 +45,7 @@ export default async function TreePage({ params }: { params: Promise<{ id: strin
       }))}
       isOwner={isOwner}
       opened={opened}
+      money={money}
       mock={paymentMode() === "mock"}
     />
   );

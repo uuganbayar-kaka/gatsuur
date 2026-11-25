@@ -255,6 +255,63 @@ export function OrnamentShape({ id }: { id: OrnamentId }) {
           ))}
         </g>
       );
+    case "coin":
+      return (
+        <g className="a-coin">
+          <circle r="13" fill="url(#o-gold)" stroke="#9C6A10" strokeWidth="1" />
+          <circle r="10" fill="none" stroke="#FFF1B8" strokeOpacity=".7" strokeWidth="1" strokeDasharray="1.5 2" />
+          <text y="5.5" textAnchor="middle" fontSize="15" fontWeight="900" fill="#8a5a00" fontFamily="system-ui, sans-serif">₮</text>
+          <ellipse cx="-5" cy="-6" rx="3" ry="1.8" fill="#fff" opacity=".6" />
+        </g>
+      );
+    case "envelope":
+      return (
+        <g>
+          <rect x="-10" y="-14" width="20" height="27" rx="2.5" fill="#D63A4A" stroke="#8E1F2E" strokeWidth=".8" />
+          <path d="M-10 -11 L0 -3 L10 -11" fill="#B32638" stroke="#8E1F2E" strokeWidth=".8" />
+          <circle cy="-2" r="4.2" fill="url(#o-gold)" stroke="#9C6A10" strokeWidth=".6" />
+          <text y="1" textAnchor="middle" fontSize="6" fontWeight="900" fill="#8a5a00" fontFamily="system-ui, sans-serif">₮</text>
+          <path d="M-6 6 H6 M-4 9 H4" stroke="#F2C14E" strokeWidth="1.2" strokeLinecap="round" />
+          <clipPath id="o-env-clip"><rect x="-10" y="-14" width="20" height="27" rx="2.5" /></clipPath>
+          <g clipPath="url(#o-env-clip)"><rect className="a-sweep" x="-30" y="-14" width="7" height="27" fill="url(#o-shine)" opacity=".7" /></g>
+        </g>
+      );
+    case "cash":
+      return (
+        <g className="a-flutter">
+          <rect x="-14" y="-6" width="28" height="15" rx="2" fill="#3E9B5F" stroke="#1F5C3C" strokeWidth=".8" transform="rotate(-8)" />
+          <rect x="-14" y="-9" width="28" height="15" rx="2" fill="#5DBB7E" stroke="#1F5C3C" strokeWidth=".8" />
+          <rect x="-11.5" y="-6.5" width="23" height="10" rx="1.5" fill="none" stroke="#E6F7EC" strokeOpacity=".7" strokeWidth=".7" />
+          <circle cy="-1.5" r="3.6" fill="#E6F7EC" opacity=".85" />
+          <text y="1" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="#1F5C3C" fontFamily="system-ui, sans-serif">₮</text>
+          <rect x="-3" y="-11" width="6" height="19" rx="1" fill="#F2C14E" stroke="#B98320" strokeWidth=".5" />
+        </g>
+      );
+    case "moneybag":
+      return (
+        <g className="a-bounce">
+          <path d="M-5 -10 C-8 -14 -5 -17 0 -15 C5 -17 8 -14 5 -10Z" fill="#C9A26B" stroke="#8A6A3C" strokeWidth=".8" />
+          <path d="M-5 -10 C-15 -4 -14 13 0 13 C14 13 15 -4 5 -10Z" fill="#D9B47E" stroke="#8A6A3C" strokeWidth=".8" />
+          <path d="M-6 -10 Q0 -7.5 6 -10" stroke="#B5302F" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <circle cy="3" r="6.5" fill="url(#o-gold)" stroke="#9C6A10" strokeWidth=".6" />
+          <text y="6.8" textAnchor="middle" fontSize="10" fontWeight="900" fill="#8a5a00" fontFamily="system-ui, sans-serif">₮</text>
+          <circle cx="-9" cy="-14" r="1.4" fill="#FFE08A" className="twinkle" />
+          <circle cx="10" cy="-8" r="1.1" fill="#fff" className="twinkle" style={{ animationDelay: "1s" }} />
+        </g>
+      );
+    case "custom":
+      return (
+        <g>
+          <circle r="18" fill="url(#o-halo)" className="a-glow" />
+          <g className="a-wobble">
+            <path d="M-13 6 L-9 -5 L9 -5 L13 6Z" fill="url(#o-crown)" stroke="#B5770A" strokeWidth=".9" strokeLinejoin="round" />
+            <path d="M-9 -5 L-6 -9 L6 -9 L9 -5Z" fill="#FFF3B0" stroke="#B5770A" strokeWidth=".7" strokeLinejoin="round" />
+            <path d="M-12 11 L-8 0 L8 0 L12 11Z" fill="url(#o-crown)" stroke="#B5770A" strokeWidth=".9" strokeLinejoin="round" transform="translate(0 3)" opacity=".85" />
+            <text y="10" textAnchor="middle" fontSize="8" fontWeight="900" fill="#7a4a00" fontFamily="system-ui, sans-serif">₮</text>
+          </g>
+          <path className="twinkle" transform="translate(11 -11)" d="M0 -3.5 L.9 -.9 L3.5 0 L.9 .9 L0 3.5 L-.9 .9 L-3.5 0 L-.9 -.9Z" fill="#fff" />
+        </g>
+      );
     case "super":
       return (
         <g>

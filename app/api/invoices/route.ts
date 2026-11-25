@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ORNAMENTS, EXPAND_PLANS } from "@/lib/config";
+import { EXPAND_PLANS, findOrnament } from "@/lib/config";
 import { baseUrl, clientIp, handle } from "@/lib/http";
 import { getSessionTreeId } from "@/lib/session";
 import { AppError, clean, createInvoice, publicInvoice, rateLimit } from "@/lib/trees";
@@ -11,12 +11,13 @@ export async function POST(req: Request) {
     await rateLimit(`inv:${clientIp(req)}`, 40, 600);
 
     if (body.kind === "gift") {
-      const orn = ORNAMENTS.find((o) => o.id === body.ornament);
+      const orn = findOrnament(body.ornament);
       const from = clean(body.from, 40);
       const message = clean(body.message, 300);
       if (!orn) throw new AppError(400, "Чимэглэлээ сонгоно уу.");
       if (!from) throw new AppError(400, "Нэрээ оруулна уу.");
-      const inv = await createInvoice({ kind: "gift", treeId, ornament: orn.id, from, message }, baseUrl(req));
+      // Мөнгөтэй/энгийн гацуурт тохирох эсэх, хүссэн дүнг createInvoice шалгана
+      const inv = await createInvoice({ kind: "gift", treeId, ornament: orn.id, from, message, amount: Number(body.amount) || undefined }, baseUrl(req));
       return NextResponse.json(publicInvoice(inv));
     }
 

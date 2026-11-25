@@ -29,6 +29,10 @@ export default async function Home() {
       )}
       <CreateForm />
       <div className="actions">
+        <Link className="btn money" href="/money">
+          💰 Мөнгөтэй гацуур үүсгэх · 15,000₮
+        </Link>
+        <p className="hint-pill">Найзууд чинь мөнгөн чимэглэл өлгөж, мөнгө нь таны данс руу орно</p>
         <Link className="link" href="/login">Гацуур аль хэдийн байгаа юу? Нэвтрэх →</Link>
       </div>
       <footer className="footer">© {new Date().getFullYear()} KubConn</footer>

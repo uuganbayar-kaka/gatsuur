@@ -2,7 +2,10 @@ import "server-only";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { getDB } from "./db";
-import { EXPAND_PLANS, FREE_CAPACITY, ORNAMENTS, TOPPER_ID, planById, planPriceBySlots, type OrnamentId, type PlanId, type TemplateId } from "./config";
+import {
+  CUSTOM_MAX, CUSTOM_MIN, EXPAND_PLANS, FREE_CAPACITY, MONEY_ORNAMENTS, MONEY_TREE_PRICE, ORNAMENTS, TOPPER_ID,
+  findOrnament, planById, planPriceBySlots, type BankId, type OrnamentId, type PlanId, type TemplateId,
+} from "./config";
 import { log } from "./log";
 import { createQPayInvoice, isQPayPaid, paymentMode, type QPayInvoice } from "./qpay";
 
@@ -13,7 +16,15 @@ export type Tree = {
   passwordHash: string;
   template: TemplateId;
   createdAt: number;
+  /** "money" — 15,000₮-өөр үүсгэсэн мөнгөтэй гацуур (мөнгөн чимэглэл, эзний данс руу шилжүүлнэ) */
+  kind?: "free" | "money";
+  bank?: BankId;
+  account?: string;
+  createFee?: number;
 };
+
+/** Мөнгөтэй гацуур үүсгэх нэхэмжлэх дээр хадгалах өгөгдөл (PIN-г хэшлэсэн). */
+type CreateData = { name: string; phone: string; passwordHash: string; template: TemplateId; bank: BankId; account: string };
 
 export type Gift = {
   id: string;
@@ -26,13 +37,14 @@ export type Gift = {
 
 export type Invoice = {
   id: string;
-  kind: "gift" | "expand";
+  kind: "gift" | "expand" | "create";
   treeId: string;
   phone?: string; // гацуурын эзний утас — төлөгдөхөд энэ утсаар гацуурыг олж дүнг нэмнэ
   amount: number;
   status: "pending" | "paid";
   gift?: { ornament: OrnamentId; from: string; message: string };
   plan?: PlanId;
+  create?: CreateData;
   qpay?: QPayInvoice;
   createdAt: number;
   paidAt?: number;
@@ -58,6 +70,9 @@ const k = {
 const INV_TTL = 60 * 60 * 24 * 90;
 const INV_INDEX_MAX = 5000;
 const TOPPER_LOCK_TTL = 15 * 60;
+const PHONE_HOLD_TTL = 15 * 60;
+/** Төлбөр хүлээгдэж буй мөнгөтэй гацуурын утасны түгжээ: phone:<p> = "pending:<invoice id>" */
+const PENDING = "pending:";
 
 const ALPHA = "abcdefghijkmnpqrstuvwxyz23456789";
 export function randomId(len = 8) {
@@ -88,11 +103,16 @@ export async function rateLimit(key: string, max: number, windowSec: number) {
   if (n > max) throw new AppError(429, "Хэт олон оролдлого. Түр хүлээгээд дахин оролдоно уу.");
 }
 
+const PHONE_TAKEN = "Энэ утасны дугаараар гацуур үүссэн байна. Нэвтэрч орно уу.";
+
 export async function createTree(input: { name: string; phone: string; password: string; template: TemplateId }) {
   const db = getDB();
   const id = randomId();
   const ok = await db.set(k.phone(input.phone), id, { nx: true });
-  if (!ok) throw new AppError(409, "Энэ утасны дугаараар гацуур үүссэн байна. Нэвтэрч орно уу.");
+  if (!ok) {
+    const cur = await db.get<string>(k.phone(input.phone));
+    throw new AppError(409, cur?.startsWith(PENDING) ? "Энэ дугаараар мөнгөтэй гацуурын төлбөр хүлээгдэж байна. 15 минутын дараа дахин оролдоно уу." : PHONE_TAKEN);
+  }
   const tree: Tree = {
     id,
     name: input.name,
@@ -100,6 +120,7 @@ export async function createTree(input: { name: string; phone: string; password:
     passwordHash: await bcrypt.hash(input.password, 10),
     template: input.template,
     createdAt: Date.now(),
+    kind: "free",
   };
   try {
     await db.set(k.tree(id), tree);
@@ -115,7 +136,7 @@ export async function createTree(input: { name: string; phone: string; password:
 
 export async function login(phone: string, password: string) {
   const db = getDB();
-  const id = await db.get<string>(k.phone(phone));
+  const id = await getTreeIdByPhone(phone);
   const tree = id ? await getTree(id) : null;
   if (!tree || !(await bcrypt.compare(password, tree.passwordHash)))
     throw new AppError(401, "Утасны дугаар эсвэл PIN код буруу байна.");
@@ -124,7 +145,88 @@ export async function login(phone: string, password: string) {
 
 export const getTree = (id: string) => getDB().get<Tree>(k.tree(id));
 
-export const getTreeIdByPhone = (phone: string) => getDB().get<string>(k.phone(phone));
+/** Утсаар гацуурын id (төлбөр хүлээгдэж буй түгжээг тооцохгүй). */
+export async function getTreeIdByPhone(phone: string) {
+  const v = await getDB().get<string>(k.phone(phone));
+  return v && !v.startsWith(PENDING) ? v : null;
+}
+
+/**
+ * Мөнгөтэй гацуур: эхлээд 15,000₮-ийн нэхэмжлэх үүсгэнэ, гацуур төлбөр орсны дараа л үүснэ.
+ * Төлбөр хүлээх хооронд утсыг 15 минут түгжинэ (өөр хүн тэр дугаараар гацуур үүсгэхгүй).
+ */
+export async function createMoneyTreeInvoice(
+  input: { name: string; phone: string; pin: string; template: TemplateId; bank: BankId; account: string },
+  baseUrl: string,
+) {
+  const db = getDB();
+  const inv: Invoice = {
+    id: randomId(12),
+    kind: "create",
+    treeId: randomId(), // төлөгдсөний дараа энэ id-тай гацуур үүснэ
+    phone: input.phone,
+    amount: MONEY_TREE_PRICE,
+    status: "pending",
+    createdAt: Date.now(),
+    create: {
+      name: input.name,
+      phone: input.phone,
+      passwordHash: await bcrypt.hash(input.pin, 10),
+      template: input.template,
+      bank: input.bank,
+      account: input.account,
+    },
+  };
+  if (!(await db.set(k.phone(input.phone), PENDING + inv.id, { nx: true, ex: PHONE_HOLD_TTL }))) {
+    const cur = await db.get<string>(k.phone(input.phone));
+    throw new AppError(409, cur?.startsWith(PENDING) ? "Энэ дугаараар гацуур үүсгэх төлбөр хүлээгдэж байна. 15 минутын дараа дахин оролдоно уу." : PHONE_TAKEN);
+  }
+  try {
+    if (paymentMode() === "qpay") {
+      inv.qpay = await createQPayInvoice({
+        amount: inv.amount,
+        description: "Мөнгөтэй гацуур үүсгэх",
+        callbackUrl: `${baseUrl}/api/qpay/callback?inv=${inv.id}`,
+        senderInvoiceNo: inv.id,
+        phone: input.phone,
+      });
+    }
+    await saveInvoice(inv);
+  } catch (e) {
+    if ((await db.get<string>(k.phone(input.phone))) === PENDING + inv.id) await db.del(k.phone(input.phone));
+    throw e;
+  }
+  return inv;
+}
+
+/** Төлөгдсөн "create" нэхэмжлэхээр мөнгөтэй гацуурыг үүсгэнэ (давхар дуудлагад нэг л удаа). */
+async function createMoneyTree(inv: Invoice) {
+  const db = getDB();
+  const c = inv.create!;
+  if (await getTree(inv.treeId)) return;
+  const tree: Tree = {
+    id: inv.treeId,
+    name: c.name,
+    phone: c.phone,
+    passwordHash: c.passwordHash,
+    template: c.template,
+    createdAt: Date.now(),
+    kind: "money",
+    bank: c.bank,
+    account: c.account,
+    createFee: inv.amount,
+  };
+  const cur = await db.get<string>(k.phone(c.phone));
+  if (cur && cur !== PENDING + inv.id && cur !== tree.id) {
+    // Түгжээ дууссаны дараа өөр хүн тэр дугаараар гацуур үүсгэсэн — админ шийдвэрлэнэ (буцаалт)
+    await log("error", "money_tree.phone_taken", undefined, { invoice: inv.id, treeId: tree.id, phone: c.phone, holder: cur });
+  } else {
+    await db.set(k.phone(c.phone), tree.id);
+  }
+  await db.set(k.tree(tree.id), tree);
+  await db.hset(k.index, tree.id, tree.createdAt);
+  await log("info", "tree.created", undefined, { id: tree.id, kind: "money", template: tree.template });
+}
 
 /** PIN-г шинэчилнэ (утас баталгаажсаны дараа л дуудна). */
 export async function setPin(id: string, pin: string) {
@@ -160,7 +262,9 @@ export async function getTreeView(id: string) {
 }
 
 export async function createInvoice(
-  input: { kind: "gift"; treeId: string; ornament: OrnamentId; from: string; message: string } | { kind: "expand"; treeId: string; plan: PlanId },
+  input:
+    | { kind: "gift"; treeId: string; ornament: OrnamentId; from: string; message: string; amount?: number }
+    | { kind: "expand"; treeId: string; plan: PlanId },
   baseUrl: string,
 ) {
   const db = getDB();
@@ -179,8 +283,16 @@ export async function createInvoice(
   let description: string;
 
   if (input.kind === "gift") {
-    const orn = ORNAMENTS.find((o) => o.id === input.ornament);
+    // Мөнгөтэй гацуурт зөвхөн мөнгөн чимэглэл, энгийн гацуурт зөвхөн энгийн чимэглэл
+    const orn = (tree.kind === "money" ? MONEY_ORNAMENTS : ORNAMENTS).find((o) => o.id === input.ornament);
     if (!orn) throw new AppError(400, "Чимэглэл буруу байна.");
+    let price = orn.price;
+    if (orn.id === "custom") {
+      const a = Number(input.amount);
+      if (!Number.isInteger(a) || a < CUSTOM_MIN || a > CUSTOM_MAX)
+        throw new AppError(400, `Дүн ${CUSTOM_MIN.toLocaleString("en-US")}₮ – ${CUSTOM_MAX.toLocaleString("en-US")}₮ хооронд бүхэл тоо байна.`);
+      price = a;
+    }
     if (orn.id === TOPPER_ID) {
       // Оройд ганцхан: аль хэдийн байгаа эсвэл өөр хүн төлж байгаа бол татгалзана
       if (await db.get(k.topper(tree.id))) throw new AppError(409, "Энэ гацуурын оройд онцгой чимэглэл аль хэдийн байна.");
@@ -190,7 +302,7 @@ export async function createInvoice(
       const [cap, count, topperId] = await Promise.all([getCapacity(tree.id), db.hlen(k.gifts(tree.id)), db.get<string>(k.topper(tree.id))]);
       if (count - (topperId ? 1 : 0) >= cap) throw new AppError(409, "Энэ гацуур дүүрсэн байна. Эзэн нь томруулсны дараа өлгөх боломжтой.");
     }
-    inv.amount = orn.price;
+    inv.amount = price;
     inv.gift = { ornament: orn.id, from: input.from, message: input.message };
     description = `Гацуурт бэлэг: ${orn.name}`;
   } else {
@@ -216,11 +328,16 @@ export async function createInvoice(
     }
   }
 
+  await saveInvoice(inv);
+  return inv;
+}
+
+async function saveInvoice(inv: Invoice) {
+  const db = getDB();
   await db.set(k.inv(inv.id), inv, { ex: INV_TTL });
   await db.lpush(k.invIndex, inv.id);
   await db.ltrim(k.invIndex, 0, INV_INDEX_MAX - 1);
   await log("info", "invoice.created", undefined, { id: inv.id, kind: inv.kind, treeId: inv.treeId, amount: inv.amount, qpayId: inv.qpay?.invoice_id });
-  return inv;
 }
 
 export const getInvoice = (id: string) => getDB().get<Invoice>(k.inv(id));
@@ -247,6 +364,8 @@ export async function finalizeInvoice(inv: Invoice): Promise<Invoice> {
     const plan = planById(inv.plan)!;
     await creditTreeAmount(inv);
     await db.hset(k.expands(inv.treeId), inv.id, plan.slots);
+  } else if (inv.kind === "create" && inv.create) {
+    await createMoneyTree(inv);
   }
   inv.status = "paid";
   inv.paidAt = Date.now();
@@ -330,7 +449,7 @@ export function publicInvoice(inv: Invoice) {
   };
 }
 
-export const giftAmount = (g: Gift) => g.amount ?? ORNAMENTS.find((o) => o.id === g.ornament)?.price ?? 0;
+export const giftAmount = (g: Gift) => g.amount ?? findOrnament(g.ornament)?.price ?? 0;
 
 export type AdminTreeRow = {
   id: string;
@@ -341,6 +460,10 @@ export type AdminTreeRow = {
   giftAmount: number;
   updateAmount: number;
   capacity: number;
+  kind: "free" | "money";
+  bank: BankId | undefined;
+  account: string | undefined;
+  createFee: number | undefined;
 };
 
 /** Админ: бүх гацуур + бэлгийн тоо, нийт дүн. Redis-ийг хэт ачаалахгүйн тулд 25-аар багцалж уншина. */
@@ -361,6 +484,10 @@ export async function listTreesForAdmin(): Promise<AdminTreeRow[]> {
           giftCount: v.gifts.length,
           giftAmount: amounts.amount,
           updateAmount: amounts.update_amount,
+          kind: v.tree.kind ?? "free",
+          bank: v.tree.bank,
+          account: v.tree.account,
+          createFee: v.tree.createFee,
           capacity: v.capacity,
         };
       }),
@@ -419,8 +546,10 @@ export async function listInvoicesForAdmin(opts: { limit?: number; syncPending?:
   return invs.map((x) => {
     const t = trees.get(x.treeId);
     const item =
-      x.kind === "gift"
-        ? (ORNAMENTS.find((o) => o.id === x.gift?.ornament)?.name ?? "Бэлэг")
+      x.kind === "create"
+        ? "Мөнгөтэй гацуур үүсгэх"
+        : x.kind === "gift"
+        ? (findOrnament(x.gift?.ornament)?.name ?? "Бэлэг")
         : `Томруулалт +${planById(x.plan)?.slots ?? "?"}`;
     return {
       id: x.id,
@@ -428,8 +557,8 @@ export async function listInvoicesForAdmin(opts: { limit?: number; syncPending?:
       status: x.status,
       amount: x.amount,
       treeId: x.treeId,
-      treeName: t?.name ?? "—",
-      phone: t?.phone ?? "—",
+      treeName: t?.name ?? x.create?.name ?? "—",
+      phone: t?.phone ?? x.create?.phone ?? "—",
       item,
       from: x.gift?.from,
       qpayId: x.qpay?.invoice_id,

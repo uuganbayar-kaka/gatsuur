@@ -16,7 +16,8 @@ export default async function AdminTrees({ searchParams }: { searchParams: Promi
   if (!admin) redirect("/admin/login");
   const { q = "", sort = "new" } = await searchParams;
 
-  let rows = await listTreesForAdmin();
+  // Мөнгөтэй гацуур /admin/money-д тусдаа харагдана
+  let rows = (await listTreesForAdmin()).filter((r) => r.kind !== "money");
   const needle = q.trim().toLowerCase();
   if (needle) rows = rows.filter((r) => r.name.toLowerCase().includes(needle) || r.phone.includes(needle));
   if (sort === "amount") rows.sort((a, b) => b.giftAmount - a.giftAmount);

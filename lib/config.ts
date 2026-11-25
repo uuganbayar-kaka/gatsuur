@@ -10,7 +10,8 @@ export type OrnamentId =
   | "gift" | "candle" | "snowman"
   | "star" | "lantern"
   | "super" | "diamond"
-  | "topper";
+  | "topper"
+  | "coin" | "envelope" | "cash" | "moneybag" | "custom";
 
 /** 20,000₮-ийн онцгой чимэглэл — гацуурт ганцхан, оройд байрлана, багтаамжид тооцогдохгүй. */
 export const TOPPER_ID: OrnamentId = "topper";
@@ -33,6 +34,41 @@ export const ORNAMENTS: { id: OrnamentId; name: string; price: number }[] = [
   { id: "diamond", name: "Очир алмаз", price: 10000 },
   { id: "topper", name: "Оройн алтан од", price: 20000 },
 ];
+
+/** Мөнгөтэй гацуур — үүсгэх үнэ. */
+export const MONEY_TREE_PRICE = 15000;
+
+/** Мөнгөтэй гацуурын мөнгөн чимэглэл. "custom" — зочин дүнгээ өөрөө оруулна. */
+export const MONEY_ORNAMENTS: { id: OrnamentId; name: string; price: number }[] = [
+  { id: "coin", name: "Алтан зоос", price: 1000 },
+  { id: "envelope", name: "Мөнгөн дугтуй", price: 5000 },
+  { id: "cash", name: "Мөнгөн боодол", price: 10000 },
+  { id: "moneybag", name: "Мөнгөн уут", price: 20000 },
+  { id: "custom", name: "Хүссэн дүн", price: 0 },
+];
+export const CUSTOM_MIN = 1000;
+export const CUSTOM_MAX = 1_000_000;
+
+/** Бүх чимэглэлээс (энгийн + мөнгөн) нэрээр нь хайна. */
+export const findOrnament = (id: OrnamentId | undefined) => [...ORNAMENTS, ...MONEY_ORNAMENTS].find((o) => o.id === id);
+
+export type BankId = "golomt" | "khan" | "tdb" | "state" | "mbank";
+export const BANKS: { id: BankId; name: string }[] = [
+  { id: "golomt", name: "Голомт банк" },
+  { id: "khan", name: "Хаан банк" },
+  { id: "tdb", name: "Худалдаа хөгжлийн банк" },
+  { id: "state", name: "Төрийн банк" },
+  { id: "mbank", name: "М банк" },
+];
+export const isBank = (v: unknown): v is BankId => BANKS.some((b) => b.id === v);
+export const bankName = (id: BankId | undefined) => BANKS.find((b) => b.id === id)?.name ?? "—";
+
+/** Дансны дугаар: зай, зураасыг авч 6–20 оронтой тоо (MN IBAN-ий "MN"-г зөвшөөрнө). */
+export function normalizeAccount(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const v = raw.replace(/[\s-]/g, "").toUpperCase();
+  return /^(MN\d{18}|\d{6,20})$/.test(v) ? v : null;
+}
 
 export type PlanId = "s" | "m" | "l";
 

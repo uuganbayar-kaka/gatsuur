@@ -42,3 +42,39 @@ export async function getSessionTreeId(): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Мөнгөтэй гацуурын төлбөр хүлээгдэж байх үед үүсгэгчийн хөтөчид invoice id-г гарын үсэгтэй хадгална —
+ * төлөгдсөний дараа зөвхөн энэ хөтөч л шинэ гацуурт автоматаар нэвтэрнэ.
+ */
+const PENDING_COOKIE = "gc";
+
+export async function setPendingCreate(invoiceId: string) {
+  const token = await new SignJWT({ inv: invoiceId })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("1d")
+    .sign(secret());
+  (await cookies()).set(PENDING_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: 60 * 60 * 24,
+  });
+}
+
+export async function getPendingCreate(): Promise<string | null> {
+  const token = (await cookies()).get(PENDING_COOKIE)?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secret());
+    return typeof payload.inv === "string" ? payload.inv : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearPendingCreate() {
+  (await cookies()).delete(PENDING_COOKIE);
+}

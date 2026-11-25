@@ -4,7 +4,7 @@ import { formatMnt } from "@/lib/config";
 
 export type PublicInvoice = {
   id: string;
-  kind: "gift" | "expand";
+  kind: "gift" | "expand" | "create";
   amount: number;
   status: "pending" | "paid";
   qr_image?: string;
@@ -58,7 +58,7 @@ export default function PaySheet({
     return (
       <div className="pay">
         <div className="success">🎉</div>
-        <h3>{inv.kind === "gift" ? "Бэлэг амжилттай өлгөгдлөө!" : "Гацуур томорлоо!"}</h3>
+        <h3>{inv.kind === "gift" ? "Бэлэг амжилттай өлгөгдлөө!" : inv.kind === "create" ? "Мөнгөтэй гацуур үүслээ!" : "Гацуур томорлоо!"}</h3>
         <p className="note-muted">Баярлалаа. Төлбөр {formatMnt(inv.amount)} амжилттай.</p>
         <button className="btn primary" onClick={onClose}>Гацуур харах</button>
       </div>
